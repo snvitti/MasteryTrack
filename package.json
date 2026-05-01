@@ -1,0 +1,8 @@
+{
+  "name": "masterytrack",
+  "version": "1.0.0",
+  "description": "MasteryTrack — standards-based assessment platform",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}

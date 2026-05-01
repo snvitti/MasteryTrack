@@ -1,0 +1,2342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MasteryTrack</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── CSS Variables (Slate Blue Theme) ── */
+:root{
+  --bg:#f0f4ff;
+  --surface:#ffffff;
+  --nav-bg:#1e2d5a;
+  --accent:#3b5bdb;
+  --accent-hover:#2f4ac0;
+  --text:#1a1d2e;
+  --muted:#5a6a9a;
+  --border:rgba(30,45,90,.1);
+  --border-med:rgba(30,45,90,.18);
+  --shadow:0 1px 5px rgba(30,45,90,.08);
+  --shadow-md:0 2px 12px rgba(30,45,90,.1);
+  --radius:16px;
+  --radius-sm:10px;
+  --fs:15px;
+}
+
+/* ── Reset & Base ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:var(--fs);line-height:1.65;background:var(--bg);color:var(--text);min-height:100vh}
+button{cursor:pointer;font-family:inherit;font-size:inherit;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--accent);text-decoration:none}
+
+/* ── Buttons ── */
+.btn{padding:8px 16px;border-radius:var(--radius-sm);font-weight:600;transition:all .14s;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-secondary{background:#fff;color:#1e2d5a;border:0.5px solid #c5d0f0}.btn-secondary:hover{background:#f0f4ff}
+.btn-ghost{color:var(--muted);padding:6px 12px;border-radius:8px}.btn-ghost:hover{background:rgba(30,45,90,.06)}
+.btn-danger{background:#dc2626;color:#fff;border-color:#dc2626}.btn-danger:hover{background:#b91c1c}
+.btn-sm{padding:5px 12px;font-size:.88em}
+.btn-xs{padding:3px 9px;font-size:.82em}
+
+/* ── Form elements ── */
+.input{width:100%;padding:8px 12px;border:0.5px solid #c5d0f0;border-radius:var(--radius-sm);outline:none;transition:border .15s;background:#f8faff}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.12);background:#fff}
+.select{width:100%;padding:8px 12px;border:0.5px solid #c5d0f0;border-radius:var(--radius-sm);outline:none;background:#f8faff;cursor:pointer}
+.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.1)}
+label{font-size:.88em;font-weight:500;color:#3a4570;display:block;margin-bottom:4px}
+
+/* ── Layout ── */
+.nav{background:var(--nav-bg);padding:0 24px;display:flex;align-items:center;height:56px;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(10,20,60,.18)}
+.nav-logo{font-weight:800;font-size:1.15em;color:#fff;letter-spacing:-.5px;flex-shrink:0}
+.nav-logo span{color:#7dd3fc}
+.page{max-width:960px;margin:0 auto;padding:32px 24px}
+.tabs{display:flex;border-bottom:1px solid var(--border-med);margin-bottom:28px}
+.tab{padding:10px 18px;font-size:.92em;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;background:none;border-left:none;border-right:none;border-top:none;font-family:inherit}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.card-hover{transition:all .15s;cursor:pointer}
+.card-hover:hover{border-color:#93b4f8;box-shadow:var(--shadow-md)}
+
+/* ── Typography helpers ── */
+.section-title{font-size:1.28em;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
+.section-sub{font-size:.92em;color:var(--muted);margin-bottom:24px}
+.text-sm{font-size:.88em}.text-xs{font-size:.8em}.text-muted{color:var(--muted)}
+.fw6{font-weight:600}.fw7{font-weight:700}
+
+/* ── Spacing ── */
+.mt4{margin-top:4px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}
+.mb4{margin-bottom:4px}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}.mb24{margin-bottom:24px}
+.gap4{gap:4px}.gap6{gap:6px}.gap8{gap:8px}.gap12{gap:12px}.gap16{gap:16px}
+
+/* ── Flex helpers ── */
+.flex{display:flex;align-items:center}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.flex-wrap{display:flex;flex-wrap:wrap}
+
+/* ── Grid ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* ── Tags & Badges ── */
+.tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:.82em;font-weight:600}
+.tag-green{background:#f0fdf4;color:#166534;border:0.5px solid #bbf7d0}
+.tag-yellow{background:#fefce8;color:#854d0e;border:0.5px solid #fde68a}
+.tag-red{background:#fff1f2;color:#9f1239;border:0.5px solid #fecdd3}
+.tag-gray{background:#f1f5f9;color:#475569;border:0.5px solid #e2e8f0}
+.tag-blue{background:#dbeafe;color:#1e40af;border:0.5px solid #bfdbfe}
+.tag-purple{background:#ede9fe;color:#6d28d9;border:0.5px solid #ddd6fe}
+.std-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;font-size:.77em;font-weight:700;background:#dbeafe;color:#1e40af}
+
+/* ── Mastery cells ── */
+.mastery-cell{border-radius:20px;padding:4px 12px;font-size:.88em;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+.m-green{background:#f0fdf4;color:#166534;border:0.5px solid #bbf7d0}
+.m-yellow{background:#fefce8;color:#854d0e;border:0.5px solid #fde68a}
+.m-red{background:#fff1f2;color:#9f1239;border:0.5px solid #fecdd3}
+.m-gray{background:#f1f5f9;color:#64748b;border:0.5px solid #e2e8f0}
+.m-mini{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700}
+
+/* ── Nav controls ── */
+.nav-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.9);border-radius:8px;padding:5px 12px;font-size:.82em;font-weight:500;cursor:pointer;font-family:inherit;transition:background .12s}
+.nav-btn:hover{background:rgba(255,255,255,.22)}
+.nav-badge{background:rgba(255,255,255,.15);color:#c7d9ff;border-radius:20px;padding:4px 12px;font-size:.77em;font-weight:600}
+
+/* ── Font size buttons ── */
+.fs-btn{width:30px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);font-family:inherit;transition:all .12s}
+.fs-btn:hover{background:rgba(255,255,255,.22)}
+.fs-btn.fs-active{background:rgba(255,255,255,.3);border-color:rgba(255,255,255,.5);color:#fff}
+
+/* ── Info boxes ── */
+.info-box{border-radius:var(--radius-sm);padding:10px 14px;font-size:.88em;margin-bottom:12px}
+.info-warn{background:#fefce8;border:0.5px solid #fde68a;color:#854d0e}
+.info-info{background:#eff6ff;border:0.5px solid #bfdbfe;color:#1e40af}
+.info-success{background:#f0fdf4;border:0.5px solid #bbf7d0;color:#166534}
+.info-error{background:#fff1f2;border:0.5px solid #fecdd3;color:#9f1239}
+
+/* ── Drop zones ── */
+.drop-zone{border:2px dashed #93b4f8;border-radius:var(--radius);padding:28px;text-align:center;background:#f0f4ff;cursor:pointer;transition:all .15s;margin-bottom:16px}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:#e0e8ff}
+.drop-zone-sm{border:1.5px dashed #93b4f8;border-radius:var(--radius-sm);padding:12px 16px;text-align:center;background:#f0f4ff;cursor:pointer;transition:all .15s}
+.drop-zone-sm:hover{border-color:var(--accent);background:#e0e8ff}
+
+/* ── Coverage table ── */
+.cov-table{width:100%;border-collapse:collapse;font-size:.88em}
+.cov-table th{text-align:center;padding:8px 12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border-med);font-size:.8em;text-transform:uppercase;letter-spacing:.4px}
+.cov-table td{text-align:center;padding:8px 12px;border-bottom:0.5px solid var(--border)}
+.cov-ok{background:#f0fdf4;color:#166534;border-radius:20px;padding:2px 10px;font-weight:700;display:inline-block;border:0.5px solid #bbf7d0}
+.cov-warn{background:#fefce8;color:#854d0e;border-radius:20px;padding:2px 10px;font-weight:700;display:inline-block;border:0.5px solid #fde68a}
+
+/* ── Question strip ── */
+.q-strip{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:20px}
+.q-num{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.88em;font-weight:600;cursor:pointer;border:0.5px solid #c5d0f0;background:#fff;color:var(--text);transition:all .1s}
+.q-num.answered{background:var(--accent);color:#fff;border-color:var(--accent)}
+.q-num.current{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.2)}
+
+/* ── Timer ── */
+.timer-box{padding:6px 14px;border-radius:8px;font-weight:700;font-size:1em;font-variant-numeric:tabular-nums}
+.timer-normal{background:#f1f5f9;color:#1e2d5a;border:0.5px solid #c5d0f0}
+.timer-yellow{background:#fefce8;color:#854d0e;border:0.5px solid #fde68a}
+.timer-red{background:#fff1f2;color:#9f1239;border:0.5px solid #fecdd3;animation:blink .9s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ── Option buttons ── */
+.opt-btn{width:100%;text-align:left;padding:11px 16px;border-radius:var(--radius-sm);border:0.5px solid #c5d0f0;background:#fff;font-size:1em;color:var(--text);transition:all .12s;cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.opt-btn:hover{border-color:#93b4f8;background:#f0f4ff}
+.opt-btn.selected{border-color:var(--accent);background:#eef2ff}
+
+/* ── Results ── */
+.results-row{border:0.5px solid var(--border-med);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:10px;box-shadow:var(--shadow)}
+.results-hdr{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:#fff}
+.results-hdr:hover{background:#f8faff}
+.results-body{padding:16px 18px;border-top:0.5px solid var(--border);background:#f8faff}
+
+/* ── Video card ── */
+.video-card{border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:flex-start;gap:12px;background:#fff;margin-bottom:8px;box-shadow:var(--shadow)}
+.video-thumb{width:44px;height:34px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+
+/* ── Unit/assessment ── */
+.unit-card{border:0.5px solid var(--border-med);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;background:#fff;box-shadow:var(--shadow)}
+.unit-hdr{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:#f8faff;border-bottom:0.5px solid var(--border)}
+.unit-hdr:hover{background:#f0f4ff}
+.unit-body{padding:16px 18px}
+.asm-card{border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:13px 16px;margin-bottom:8px;background:#fff;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;box-shadow:var(--shadow)}
+.asm-card:hover{border-color:#93b4f8;box-shadow:var(--shadow-md)}
+
+/* ── Student row ── */
+.student-row{border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:13px 18px;margin-bottom:8px;background:#fff;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.student-row:hover{border-color:#93b4f8;box-shadow:0 2px 10px rgba(59,91,219,.1);transform:translateY(-1px)}
+
+/* ── Choice row in builder ── */
+.choice-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.choice-dot{width:18px;height:18px;border-radius:50%;border:2px solid #c5d0f0;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.choice-dot.mc-on{background:var(--accent);border-color:var(--accent)}
+.choice-dot.multi-on{background:#7c3aed;border-color:#7c3aed}
+.choice-dot-inner{width:7px;height:7px;border-radius:50%;background:#fff}
+
+/* ── Preview item ── */
+.preview-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:8px;border:0.5px solid var(--border-med);margin-bottom:6px;background:#fff;cursor:pointer;transition:all .1s}
+.preview-item.checked{border-color:var(--accent);background:#eef2ff}
+.preview-item:hover{border-color:#93b4f8}
+
+/* ── Spinner ── */
+.spinner{width:20px;height:20px;border:2.5px solid #c5d0f0;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toggle switch ── */
+.toggle{width:40px;height:22px;border-radius:11px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-knob{position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s}
+
+/* ── Image preview ── */
+.img-preview{max-width:100%;max-height:180px;border-radius:10px;border:0.5px solid var(--border);object-fit:contain;display:block;margin-top:8px}
+
+/* ── Course card ── */
+.course-card{background:#fff;border:0.5px solid var(--border);border-radius:18px;padding:22px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.course-card:hover{border-color:#93b4f8;box-shadow:0 4px 20px rgba(59,91,219,.13);transform:translateY(-2px)}
+
+/* ── Divider ── */
+hr.div{border:none;border-top:0.5px solid var(--border);margin:16px 0}
+
+/* ── Print styles ── */
+@media print {
+  body{background:#fff!important;font-size:12px;color:#000}
+  .nav,.no-print,.btn,.tabs{display:none!important}
+  .print-only{display:block!important}
+  .card{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid}
+  .page{padding:0!important;max-width:100%!important}
+  h1,h2,h3{color:#000!important}
+  .tag,.std-badge{border:1px solid #ccc!important}
+  @page{margin:1.5cm;size:A4}
+}
+.print-only{display:none}
+.print-btn{background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:var(--radius-sm);font-size:.88em;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.print-btn:hover{background:var(--accent-hover)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+// ═══════════════════════════════════════════════════════════
+// SEED DATA
+// ═══════════════════════════════════════════════════════════
+const SEED_STANDARDS=[
+  {id:'s1',code:'1.1',title:'Cell Membrane Structure',desc:'Describe the phospholipid bilayer and roles of membrane proteins in transport and signaling.'},
+  {id:'s2',code:'1.2',title:'Membrane Transport',desc:'Distinguish between passive and active transport mechanisms across cell membranes.'},
+  {id:'s3',code:'1.3',title:'Neural Signaling',desc:'Explain how action potentials are generated and propagated along neurons.'},
+  {id:'s4',code:'1.4',title:'Synaptic Transmission',desc:'Describe the sequence of events at a chemical synapse from vesicle release to receptor binding.'},
+  {id:'s5',code:'1.5',title:'Homeostasis & Feedback',desc:'Distinguish between negative and positive feedback loops with physiological examples.'},
+];
+
+const SEED_QUESTIONS=[
+  {id:'q1',text:'Which component of the plasma membrane is primarily responsible for its selective permeability?',format:'mc',choices:['Cholesterol','Phospholipid bilayer','Integral proteins','Carbohydrate chains'],correct:1,correctMulti:[],standards:['s1'],difficulty:'Basic',explanation:'The phospholipid bilayer creates a hydrophobic core that prevents most polar and charged molecules from freely crossing.',wrongExplanations:{0:'Cholesterol modulates fluidity but is not the primary barrier.',2:'Proteins create channels/carriers but the bilayer itself is the permeability barrier.',3:'Carbohydrate chains function in cell recognition, not selective permeability.'},image:null,tolerance:0.5},
+  {id:'q2',text:'A researcher blocks Na⁺/K⁺-ATPase with ouabain. Which result is most expected?',format:'mc',choices:['Increased oxygen consumption','Intracellular Na⁺ rises, K⁺ falls','Faster membrane repolarization','More negative resting potential'],correct:1,correctMulti:[],standards:['s2'],difficulty:'Conceptual',explanation:'Na⁺/K⁺-ATPase pumps 3 Na⁺ out and 2 K⁺ in. Blocking it causes Na⁺ to accumulate inside and K⁺ to decrease.',wrongExplanations:{0:'ATP use would drop, not increase, without the pump cycling.',2:'Repolarization would be impaired, not faster.',3:'Potential would become less negative as Na⁺ accumulates.'},image:null,tolerance:0.5},
+  {id:'q3',text:'During the depolarization phase of an action potential, which ion rushes INTO the cell?',format:'mc',choices:['K⁺','Cl⁻','Ca²⁺','Na⁺'],correct:3,correctMulti:[],standards:['s3'],difficulty:'Basic',explanation:'Voltage-gated Na⁺ channels open during depolarization, allowing Na⁺ to rush in down its electrochemical gradient.',wrongExplanations:{0:'K⁺ exits during repolarization.',1:'Cl⁻ movement is not the primary driver of depolarization.',2:'Ca²⁺ entry is important at the synapse, not for axon depolarization.'},image:null,tolerance:0.5},
+  {id:'q4',text:'Select ALL structures correctly matched with their function in synaptic transmission.',format:'multi',choices:['Synaptic vesicle — stores neurotransmitters','Voltage-gated Ca²⁺ channel — triggers vesicle fusion','Postsynaptic density — packages neurotransmitters','Reuptake transporter — clears neurotransmitter from synapse'],correct:0,correctMulti:[0,1,3],standards:['s4'],difficulty:'Conceptual',explanation:'Vesicles store NTs; Ca²⁺ influx triggers exocytosis; reuptake transporters clear the cleft. The postsynaptic density anchors receptors, it does not package neurotransmitters.',wrongExplanations:{2:'The postsynaptic density anchors receptors; neurotransmitters are packaged in the presynaptic terminal.'},image:null,tolerance:0.5},
+  {id:'q5',text:'A drop in blood glucose triggers glucagon release, which raises glucose. This is an example of:',format:'mc',choices:['Positive feedback','Feedforward regulation','Negative feedback','Hormonal cascade'],correct:2,correctMulti:[],standards:['s5'],difficulty:'Basic',explanation:'Negative feedback: deviation from set point (low glucose) triggers a response (glucagon) that counteracts it.',wrongExplanations:{0:'Positive feedback amplifies, not corrects, a deviation.',1:'Feedforward anticipates a change before it occurs.',3:'Hormonal cascade is not a feedback classification.'},image:null,tolerance:0.5},
+  {id:'q6',text:'Oxytocin during labor: contractions → more oxytocin → stronger contractions. This is:',format:'mc',choices:['Negative feedback','Negative feedforward','Positive feedback','Autonomic override'],correct:2,correctMulti:[],standards:['s5'],difficulty:'Conceptual',explanation:'Positive feedback amplifies the response away from the set point; terminated only by delivery.',wrongExplanations:{0:'Negative feedback would reduce contractions, not amplify them.',1:'Feedforward precedes the stimulus.',3:'This is an endocrine mechanism, not autonomic classification.'},image:null,tolerance:0.5},
+  {id:'q7',text:'A neuron has a resting potential of −70 mV. What approximate voltage is reached at the peak of an action potential?',format:'numeric',choices:[],correct:30,correctMulti:[],standards:['s3'],difficulty:'Applied',explanation:'Massive Na⁺ influx drives the membrane to approximately +30 mV before voltage-gated Na⁺ channels inactivate.',wrongExplanations:{},image:null,tolerance:5},
+  {id:'q8',text:'Which transport mechanism requires BOTH a carrier protein AND ATP directly?',format:'mc',choices:['Simple diffusion','Facilitated diffusion','Primary active transport','Secondary active transport'],correct:2,correctMulti:[],standards:['s2'],difficulty:'Applied',explanation:'Primary active transport (e.g., Na⁺/K⁺-ATPase) uses ATP directly. Secondary active transport couples to an ion gradient, not ATP directly.',wrongExplanations:{0:'Simple diffusion requires no protein or energy.',1:'Facilitated diffusion uses a carrier but no ATP.',3:'Secondary active transport uses the gradient established by primary active transport, not ATP directly.'},image:null,tolerance:0.5},
+  {id:'q9',text:'The fluid mosaic model describes the plasma membrane as:',format:'mc',choices:['A rigid bilayer of tightly packed phospholipids','A dynamic bilayer with freely moving proteins and lipids','A static protein scaffold embedded in lipids','A single-layered lipid sheet with surface proteins'],correct:1,correctMulti:[],standards:['s1'],difficulty:'Basic',explanation:'The fluid mosaic model emphasizes lateral movement of both lipids and proteins within the bilayer.',wrongExplanations:{0:'The membrane is fluid, not rigid.',2:'Proteins move laterally; the membrane is not static.',3:'The membrane is a bilayer (two leaflets), not a monolayer.'},image:null,tolerance:0.5},
+];
+
+const SEED_VIDEOS=[
+  {id:'v1',title:'Cell Membrane — Fluid Mosaic Model',desc:'Animated walkthrough of the phospholipid bilayer, membrane proteins, and cholesterol roles.',url:'https://youtube.com/watch?v=Xcyb9pM8sL4',standards:['s1'],thumb:'🔬'},
+  {id:'v2',title:'Active vs. Passive Transport',desc:'Side-by-side comparison of diffusion, osmosis, facilitated diffusion, and active transport.',url:'https://youtube.com/watch?v=poNsowmGCsA',standards:['s2'],thumb:'🚛'},
+  {id:'v3',title:'Action Potential Step by Step',desc:'Detailed walkthrough of resting potential, depolarization, repolarization, and refractory period.',url:'https://youtube.com/watch?v=HYLyhXRp298',standards:['s3'],thumb:'⚡'},
+  {id:'v4',title:'Synaptic Transmission & Neurotransmitters',desc:'Covers vesicle fusion, NT release, receptor binding, and reuptake mechanisms.',url:'https://youtube.com/watch?v=_I9PGMlxTFM',standards:['s4'],thumb:'🧠'},
+];
+
+const SEED_UNITS=[
+  {id:'u1',name:'Unit 1: Cell & Membrane Physiology',desc:'Structure and transport across biological membranes.',collapsed:false,
+   assessments:[
+     {id:'a1',title:'Quiz 1: Membrane Basics',desc:'Cell membrane structure and transport mechanisms.',timeLimit:15,standards:['s1','s2'],questionIds:['q1','q2','q8','q9'],published:true,randomize:false,prerequisiteId:null,prerequisiteGrade:0},
+   ]},
+  {id:'u2',name:'Unit 2: Neural & Systems Physiology',desc:'Nerve signaling, synaptic communication, and homeostasis.',collapsed:false,
+   assessments:[
+     {id:'a2',title:'Week 3 Check: Neural Physiology',desc:'Covers neural signaling, synaptic transmission, and feedback loops.',timeLimit:20,standards:['s1','s2','s3','s4','s5'],questionIds:['q1','q2','q3','q4','q5','q6','q7','q8','q9'],published:true,randomize:false,prerequisiteId:'a1',prerequisiteGrade:60},
+   ]},
+];
+
+const SEED_ATTEMPTS=[
+  {id:'at1',studentId:'stu_aisha',studentName:'Aisha Mensah',assessmentId:'a2',
+   answers:{q1:1,q2:1,q3:3,q4:[0,1,3],q5:2,q6:2,q7:'28',q8:2,q9:1},
+   submittedAt:'2025-04-14T10:32:00',timeExpired:false},
+  {id:'at2',studentId:'stu_jordan',studentName:'Jordan Park',assessmentId:'a2',
+   answers:{q1:1,q2:0,q3:3,q4:[0,1],q5:0,q6:2,q7:'40',q8:1,q9:1},
+   submittedAt:'2025-04-14T11:05:00',timeExpired:false},
+  {id:'at3',studentId:'stu_aisha',studentName:'Aisha Mensah',assessmentId:'a1',
+   answers:{q1:1,q2:1,q8:2,q9:1},
+   submittedAt:'2025-04-14T09:15:00',timeExpired:false},
+  {id:'at4',studentId:'stu_jordan',studentName:'Jordan Park',assessmentId:'a1',
+   answers:{q1:1,q2:0,q8:1,q9:1},
+   submittedAt:'2025-04-14T09:40:00',timeExpired:false},
+];
+
+const SEED_COURSE={
+  id:'c1',
+  instructorId:'inst_default',
+  name:'Human Physiology I — Neural & Cellular Unit',
+  description:'Foundations of cellular and neural physiology.',
+  studentPassword:'physio2025',
+  roster:[{id:'stu_aisha',name:'Aisha Mensah',email:'aisha@example.com'},{id:'stu_jordan',name:'Jordan Park',email:'jordan@example.com'}],
+  standards:SEED_STANDARDS,
+  units:SEED_UNITS,
+  questions:SEED_QUESTIONS,
+  videos:SEED_VIDEOS,
+  attempts:SEED_ATTEMPTS,
+};
+
+const INSTRUCTOR_PASSWORD='family';
+
+// ═══════════════════════════════════════════════════════════
+// SCORING
+// ═══════════════════════════════════════════════════════════
+const WEIGHTS={Basic:1,Conceptual:2,Applied:3};
+const THRESH={green:0.85,yellow:0.60};
+
+function isCorrect(q,ans){
+  if(q.format==='mc') return Number(ans)===q.correct;
+  if(q.format==='multi'){
+    if(!Array.isArray(ans)) return false;
+    const a=[...ans].map(Number).sort((a,b)=>a-b);
+    const b=[...(q.correctMulti||[])].map(Number).sort((a,b)=>a-b);
+    return JSON.stringify(a)===JSON.stringify(b);
+  }
+  return Math.abs(Number(ans)-q.correct)<=(q.tolerance||0.5);
+}
+
+function scoreAttempt(attempt,questions){
+  const stdMap={};
+  questions.forEach(q=>{
+    if(!attempt.answers.hasOwnProperty(q.id)) return;
+    const w=WEIGHTS[q.difficulty]||1;
+    const ok=isCorrect(q,attempt.answers[q.id]);
+    q.standards.forEach(sid=>{
+      if(!stdMap[sid]) stdMap[sid]={earned:0,possible:0};
+      stdMap[sid].possible+=w;
+      if(ok) stdMap[sid].earned+=w;
+    });
+  });
+  const stdScores={};
+  Object.entries(stdMap).forEach(([sid,{earned,possible}])=>{stdScores[sid]=possible>0?earned/possible:null;});
+  const answered=questions.filter(q=>attempt.answers.hasOwnProperty(q.id));
+  const overall=answered.reduce((acc,q)=>{
+    const ok=isCorrect(q,attempt.answers[q.id]);
+    return{earned:acc.earned+(ok?1:0),total:acc.total+1};
+  },{earned:0,total:0});
+  return{stdScores,overall};
+}
+
+function masteryLevel(score){
+  if(score===null||score===undefined) return 'untested';
+  if(score>=THRESH.green) return 'green';
+  if(score>=THRESH.yellow) return 'yellow';
+  return 'red';
+}
+
+function bestMastery(attempts,studentId,questions){
+  const best={};
+  attempts.filter(a=>a.studentId===studentId).forEach(attempt=>{
+    const qs=questions.filter(q=>attempt.answers.hasOwnProperty(q.id));
+    const {stdScores}=scoreAttempt(attempt,qs);
+    Object.entries(stdScores).forEach(([sid,score])=>{
+      if(score!==null&&(best[sid]===null||best[sid]===undefined||score>best[sid])) best[sid]=score;
+    });
+  });
+  return best;
+}
+
+function bestOverallPct(attempts,studentId,assessmentId,questions){
+  const myAttempts=attempts.filter(a=>a.studentId===studentId&&a.assessmentId===assessmentId);
+  if(!myAttempts.length) return null;
+  let best=0;
+  myAttempts.forEach(att=>{
+    const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
+    const {overall}=scoreAttempt(att,qs);
+    if(overall.total>0){const pct=overall.earned/overall.total*100;if(pct>best)best=pct;}
+  });
+  return best;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════
+function MasteryCell({score,size='normal'}){
+  const level=masteryLevel(score);
+  const cfg={
+    green:{cls:'m-green',icon:'✓',label:'Mastery'},
+    yellow:{cls:'m-yellow',icon:'◐',label:'Satisfactory'},
+    red:{cls:'m-red',icon:'⚠',label:'Needs Review'},
+    untested:{cls:'m-gray',icon:'—',label:'Not tested'},
+  }[level];
+  if(size==='mini'){
+    const bg={green:'#dcfce7',yellow:'#fef9c3',red:'#fee2e2',untested:'#f3f4f6'}[level];
+    const col={green:'#166534',yellow:'#854d0e',red:'#991b1b',untested:'#9ca3af'}[level];
+    return <div className="m-mini" title={cfg.label} style={{background:bg,color:col}}>{cfg.icon}</div>;
+  }
+  return(
+    <span className={`mastery-cell ${cfg.cls}`}>
+      <span>{cfg.icon}</span><span>{cfg.label}</span>
+      {score!==null&&score!==undefined&&<span style={{opacity:.65,fontSize:12,marginLeft:4}}>{Math.round(score*100)}%</span>}
+    </span>
+  );
+}
+
+function Spinner(){return <span className="spinner"/>;}
+
+function Toggle({on,onChange}){
+  return(
+    <div className="toggle" onClick={()=>onChange(!on)} style={{background:on?'#4F46E5':'#d1d5db'}}>
+      <div className="toggle-knob" style={{left:on?21:3}}/>
+    </div>
+  );
+}
+
+function ImageUploader({value,onChange}){
+  const ref=useRef();
+  async function handleFile(file){
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
+    onChange(b64);
+  }
+  return value?(
+    <div style={{position:'relative',display:'inline-block'}}>
+      <img src={value} alt="Q" className="img-preview"/>
+      <button onClick={()=>onChange(null)} style={{position:'absolute',top:4,right:4,background:'#dc2626',color:'#fff',border:'none',borderRadius:'50%',width:22,height:22,fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>
+    </div>
+  ):(
+    <div className="drop-zone-sm" onClick={()=>ref.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))handleFile(f);}}>
+      <input ref={ref} type="file" accept="image/*" style={{display:'none'}} onChange={e=>{if(e.target.files[0])handleFile(e.target.files[0]);e.target.value='';}}/>
+      <div style={{fontWeight:600,color:'#6d28d9',fontSize:13}}>🖼 Upload image (optional)</div>
+      <div className="text-xs text-muted">PNG, JPG, GIF</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI HELPER
+// ═══════════════════════════════════════════════════════════
+async function claudeCall(system,userMsg,maxTokens=1500){
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,system,messages:[{role:'user',content:userMsg}]})
+  });
+  const data=await resp.json();
+  return(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+}
+
+function parseJSON(raw){
+  return JSON.parse(raw.replace(/```json|```/g,'').trim());
+}
+
+// ═══════════════════════════════════════════════════════════
+// SYLLABUS UPLOADER
+// ═══════════════════════════════════════════════════════════
+function SyllabusUploader({onExtracted}){
+  const [state,setState]=useState('idle');
+  const [preview,setPreview]=useState([]);
+  const [err,setErr]=useState('');
+  const [drag,setDrag]=useState(false);
+  const fileRef=useRef();
+
+  async function processFile(file){
+    setState('loading');
+    try{
+      const SYS=`Extract ALL learning objectives from this syllabus. Return ONLY a valid JSON array, no markdown. Schema: [{"code":"string","title":"string","desc":"string"}]. code=short alphanumeric label, title=3-6 words, desc=1 sentence action verb.`;
+      let msg;
+      if(file.type==='application/pdf'){
+        const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+        msg=[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extract learning objectives as JSON.'}];
+      } else {
+        const text=await file.text();
+        msg=`Extract learning objectives as JSON:\n\n${text.slice(0,8000)}`;
+      }
+      const raw=await claudeCall(SYS,msg);
+      const parsed=parseJSON(raw);
+      setPreview(parsed.map((s,i)=>({...s,_id:'syl'+i+Date.now(),checked:true})));
+      setState('preview');
+    }catch(e){setErr('Could not extract objectives. Ensure the file has readable text.');setState('error');}
+  }
+
+  if(state==='loading') return <div className="card mb16" style={{textAlign:'center',padding:28,border:'2px dashed #c7d2fe',background:'#f8f7ff'}}><Spinner/><div style={{marginTop:10,fontWeight:600,color:'#4F46E5'}}>Reading syllabus with AI…</div></div>;
+  if(state==='error') return <div className="info-box info-error flex-between mb16"><span>⚠ {err}</span><button className="btn btn-ghost btn-sm" onClick={()=>setState('idle')}>Try again</button></div>;
+  if(state==='preview') return(
+    <div className="card mb16" style={{border:'1.5px solid #a5b4fc'}}>
+      <div className="flex-between mb12">
+        <div><div className="fw7" style={{fontSize:15}}>AI found {preview.length} objectives</div><div className="text-sm text-muted">Uncheck any to exclude. Replaces all current standards.</div></div>
+        <div className="flex gap8">
+          <button className="btn btn-primary btn-sm" onClick={()=>{onExtracted(preview.filter(s=>s.checked).map(s=>({id:'s'+Date.now()+Math.random(),code:s.code,title:s.title,desc:s.desc})));setState('idle');setPreview([]);}}>Import selected</button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>{setState('idle');setPreview([]);}}>Cancel</button>
+        </div>
+      </div>
+      <div style={{maxHeight:340,overflowY:'auto'}}>
+        {preview.map((s,i)=>(
+          <div key={s._id} className={`preview-item ${s.checked?'checked':''}`} onClick={()=>setPreview(prev=>prev.map((x,j)=>j===i?{...x,checked:!x.checked}:x))}>
+            <input type="checkbox" checked={s.checked} onChange={()=>{}} style={{marginTop:2,accentColor:'#4F46E5',flexShrink:0}}/>
+            <div><div className="flex gap8"><span className="std-badge">{s.code}</span><span className="fw6" style={{fontSize:14}}>{s.title}</span></div>{s.desc&&<div className="text-sm text-muted mt4">{s.desc}</div>}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  return(
+    <div className={`drop-zone ${drag?'drag-over':''}`} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);const f=e.dataTransfer.files[0];if(f)processFile(f);}} onClick={()=>fileRef.current.click()}>
+      <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx" style={{display:'none'}} onChange={e=>{if(e.target.files[0])processFile(e.target.files[0]);e.target.value='';}}/>
+      <div style={{fontSize:28,marginBottom:8}}>📄</div>
+      <div className="fw7" style={{color:'#4F46E5',marginBottom:4}}>Upload syllabus</div>
+      <div className="text-sm text-muted mb12">Drag & drop or click — PDF or text</div>
+      <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 14px',borderRadius:20,background:'#4F46E5',color:'#fff',fontSize:13,fontWeight:500}}>✦ AI extracts objectives automatically</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STANDARDS MANAGER
+// ═══════════════════════════════════════════════════════════
+function StandardsManager({standards,setStandards}){
+  const [editId,setEditId]=useState(null);
+  const [editForm,setEditForm]=useState({});
+  const [form,setForm]=useState({code:'',title:'',desc:''});
+  const [bulk,setBulk]=useState('');
+  const [showBulk,setShowBulk]=useState(false);
+
+  function addStd(){if(!form.code||!form.title)return;setStandards(prev=>[...prev,{id:'s'+Date.now(),...form}]);setForm({code:'',title:'',desc:''});}
+  function parseBulk(){const ns=bulk.trim().split('\n').filter(Boolean).map(l=>{const p=l.trim().split(/\s+/);return{id:'s'+Date.now()+Math.random(),code:p[0],title:p.slice(1).join(' ')||p[0],desc:''};});setStandards(prev=>[...prev,...ns]);setBulk('');setShowBulk(false);}
+
+  return(
+    <div>
+      <div className="flex-between mb16">
+        <div><div className="section-title">Standards</div><div className="section-sub" style={{marginBottom:0}}>Define course learning objectives.</div></div>
+        <button className="btn btn-secondary btn-sm" onClick={()=>setShowBulk(!showBulk)}>{showBulk?'Hide':'+ Bulk paste'}</button>
+      </div>
+      <SyllabusUploader onExtracted={ns=>setStandards(ns)}/>
+      {showBulk&&<div className="card mb16"><label>One per line: CODE Title</label><textarea className="input mt4" rows={4} value={bulk} onChange={e=>setBulk(e.target.value)} placeholder={'1.6 Related Rates\n1.7 Mean Value Theorem'}/><button className="btn btn-primary btn-sm mt8" onClick={parseBulk}>Import</button></div>}
+      {standards.length===0&&<div className="card mb16" style={{textAlign:'center',color:'#9ca3af',padding:28}}>No standards yet. Upload a syllabus above or add one manually.</div>}
+      {standards.map(s=>(
+        <div key={s.id} style={{border:'1px solid #e5e7eb',borderRadius:10,padding:'11px 15px',marginBottom:8,background:'#fff',display:'flex',alignItems:'flex-start',gap:10}}>
+          <span style={{color:'#d1d5db',fontSize:16,marginTop:2,cursor:'grab'}}>⠿</span>
+          {editId===s.id?(
+            <div style={{flex:1,display:'flex',gap:8,flexWrap:'wrap'}}>
+              <input className="input" style={{width:80}} value={editForm.code} onChange={e=>setEditForm(f=>({...f,code:e.target.value}))}/>
+              <input className="input" style={{flex:1,minWidth:140}} value={editForm.title} onChange={e=>setEditForm(f=>({...f,title:e.target.value}))}/>
+              <input className="input" style={{flex:2,minWidth:180}} value={editForm.desc} onChange={e=>setEditForm(f=>({...f,desc:e.target.value}))} placeholder="Description"/>
+              <button className="btn btn-primary btn-sm" onClick={()=>{setStandards(prev=>prev.map(x=>x.id===s.id?{...x,...editForm}:x));setEditId(null);}}>Save</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setEditId(null)}>Cancel</button>
+            </div>
+          ):(
+            <><div style={{flex:1}}><span className="std-badge">{s.code}</span><span className="fw6" style={{fontSize:14,marginLeft:8}}>{s.title}</span>{s.desc&&<div className="text-sm text-muted mt4">{s.desc}</div>}</div>
+            <div className="flex gap4"><button className="btn btn-ghost btn-sm" onClick={()=>{setEditId(s.id);setEditForm({code:s.code,title:s.title,desc:s.desc||''});}}>Edit</button><button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>setStandards(prev=>prev.filter(x=>x.id!==s.id))}>Remove</button></div></>
+          )}
+        </div>
+      ))}
+      <div className="card mt16">
+        <div className="fw6 mb12">Add a standard manually</div>
+        <div style={{display:'grid',gridTemplateColumns:'90px 1fr',gap:8}}>
+          <div><label>Code</label><input className="input mt4" value={form.code} onChange={e=>setForm(f=>({...f,code:e.target.value}))} placeholder="1.6"/></div>
+          <div><label>Title</label><input className="input mt4" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="Related Rates"/></div>
+        </div>
+        <div className="mt8"><label>Description (optional)</label><input className="input mt4" value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="One sentence…"/></div>
+        <button className="btn btn-primary mt12" onClick={addStd}>Add standard</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUESTION FORM
+// ═══════════════════════════════════════════════════════════
+function QuestionForm({initQ,standards,onSave,onCancel}){
+  const empty={text:'',format:'mc',choices:['','','',''],correct:0,correctMulti:[],standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},numCorrect:'',numTolerance:'0.5',image:null};
+  const [f,setF]=useState(initQ?{...empty,...initQ,numCorrect:String(initQ.correct||''),numTolerance:String(initQ.tolerance||'0.5'),wrongExplanations:initQ.wrongExplanations||{}}:empty);
+
+  function addChoice(){setF(p=>({...p,choices:[...p.choices,'']}));}
+  function removeChoice(i){setF(p=>{const ch=[...p.choices];ch.splice(i,1);let c=p.correct;let cm=[...p.correctMulti];if(p.format==='mc'&&c>=i)c=Math.max(0,c-1);if(p.format==='multi')cm=cm.filter(x=>x!==i).map(x=>x>i?x-1:x);return{...p,choices:ch,correct:c,correctMulti:cm};});}
+  function toggleMulti(i){setF(p=>{const cm=[...p.correctMulti];const idx=cm.indexOf(i);if(idx>=0)cm.splice(idx,1);else cm.push(i);return{...p,correctMulti:cm};});}
+  function toggleStd(sid){setF(p=>({...p,standards:p.standards.includes(sid)?p.standards.filter(x=>x!==sid):[...p.standards,sid]}));}
+
+  function handleSave(){
+    const q={...f,id:initQ?.id||'q'+Date.now()};
+    if(q.format==='numeric'){q.correct=Number(q.numCorrect);q.tolerance=Number(q.numTolerance||0.5);}
+    delete q.numCorrect;delete q.numTolerance;
+    onSave(q);
+  }
+
+  const incorrectIdxs=(f.format==='mc'?f.choices.map((_,i)=>i).filter(i=>i!==f.correct):f.choices.map((_,i)=>i).filter(i=>!f.correctMulti.includes(i)));
+
+  return(
+    <div className="card">
+      <label>Question text</label>
+      <textarea className="input mt4" rows={3} value={f.text} onChange={e=>setF(p=>({...p,text:e.target.value}))} placeholder="Enter question…"/>
+      <div className="mt12"><label>Question image (optional)</label><div className="mt4"><ImageUploader value={f.image} onChange={v=>setF(p=>({...p,image:v}))}/></div></div>
+      <div className="grid2 mt12">
+        <div><label>Format</label>
+          <select className="select mt4" value={f.format} onChange={e=>setF(p=>({...p,format:e.target.value}))}>
+            <option value="mc">Multiple choice (single answer)</option>
+            <option value="multi">Multiple select (all that apply)</option>
+            <option value="numeric">Numeric</option>
+          </select></div>
+        <div><label>Difficulty</label>
+          <select className="select mt4" value={f.difficulty} onChange={e=>setF(p=>({...p,difficulty:e.target.value}))}>
+            <option>Basic</option><option>Conceptual</option><option>Applied</option>
+          </select></div>
+      </div>
+      <div className="mt12"><label>Standards tagged</label>
+        <div className="flex flex-wrap gap6 mt4">
+          {standards.map(s=>{const on=f.standards.includes(s.id);return<button key={s.id} onClick={()=>toggleStd(s.id)} style={{padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',border:'1.5px solid',borderColor:on?'#4F46E5':'#d1d5db',background:on?'#e0e7ff':'#f9fafb',color:on?'#3730a3':'#6b7280'}}>{s.code} {s.title}</button>;})}
+        </div>
+      </div>
+      {(f.format==='mc'||f.format==='multi')&&(
+        <div className="mt12">
+          <div className="flex-between mb8"><label style={{marginBottom:0}}>{f.format==='multi'?'Choices (check all correct)':'Choices (select correct)'}</label><button className="btn btn-ghost btn-xs" onClick={addChoice}>+ Add choice</button></div>
+          {f.format==='multi'&&<div className="text-xs text-muted mb8">Click the dot to mark a choice as correct.</div>}
+          {f.choices.map((c,i)=>(
+            <div key={i} className="choice-row">
+              {f.format==='mc'?(
+                <div className={`choice-dot ${f.correct===i?'mc-on':''}`} onClick={()=>setF(p=>({...p,correct:i}))}>
+                  {f.correct===i&&<div className="choice-dot-inner"/>}
+                </div>
+              ):(
+                <div className={`choice-dot ${f.correctMulti.includes(i)?'multi-on':''}`} style={{borderRadius:3}} onClick={()=>toggleMulti(i)}>
+                  {f.correctMulti.includes(i)&&<div className="choice-dot-inner"/>}
+                </div>
+              )}
+              <input className="input" style={{flex:1}} value={c} onChange={e=>setF(p=>{const ch=[...p.choices];ch[i]=e.target.value;return{...p,choices:ch};})} placeholder={`Choice ${i+1}`}/>
+              {f.choices.length>2&&<button className="btn btn-ghost btn-xs" style={{color:'#dc2626',padding:'3px 7px'}} onClick={()=>removeChoice(i)}>✕</button>}
+            </div>
+          ))}
+        </div>
+      )}
+      {f.format==='numeric'&&(
+        <div className="grid2 mt12">
+          <div><label>Correct answer</label><input className="input mt4" type="number" value={f.numCorrect} onChange={e=>setF(p=>({...p,numCorrect:e.target.value}))}/></div>
+          <div><label>Tolerance (±)</label><input className="input mt4" type="number" value={f.numTolerance} onChange={e=>setF(p=>({...p,numTolerance:e.target.value}))}/></div>
+        </div>
+      )}
+      <div className="mt12"><label>Explanation for correct answer</label>
+        <textarea className="input mt4" rows={2} value={f.explanation} onChange={e=>setF(p=>({...p,explanation:e.target.value}))} placeholder="Why is the correct answer right?"/>
+      </div>
+      {(f.format==='mc'||f.format==='multi')&&incorrectIdxs.length>0&&(
+        <div className="mt12">
+          <label>Wrong-answer explanations (optional)</label>
+          <div className="text-xs text-muted mb8">Help students understand why each distractor is wrong.</div>
+          {incorrectIdxs.map(i=>(
+            <div key={i} className="mb8">
+              <div className="text-xs fw6 text-muted mb4">Choice {i+1}: "{f.choices[i]||'(empty)'}"</div>
+              <input className="input" value={(f.wrongExplanations||{})[i]||''} onChange={e=>setF(p=>({...p,wrongExplanations:{...(p.wrongExplanations||{}),[i]:e.target.value}}))} placeholder={`Why choice ${i+1} is wrong…`}/>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap8 mt16"><button className="btn btn-primary" onClick={handleSave}>Save question</button><button className="btn btn-secondary" onClick={onCancel}>Cancel</button></div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUESTION BANK UPLOADER
+// ═══════════════════════════════════════════════════════════
+function QuestionBankUploader({standards,onAdd}){
+  const [state,setState]=useState('idle');
+  const [preview,setPreview]=useState([]);
+  const [err,setErr]=useState('');
+  const fileRef=useRef();
+
+  async function processFile(file){
+    setState('loading');
+    try{
+      const text=await file.text();
+      const SYS=`You are a quiz-question parser. Given text with questions and answers, extract them. Return ONLY a valid JSON array, no markdown. Schema per item: {"text":"string","format":"mc","choices":["string"],"correct":0,"correctMulti":[],"difficulty":"Basic","explanation":"string","wrongExplanations":{}}. format="mc" single correct, "multi" multiple correct, "numeric". correct=0-based index for mc. correctMulti=array of indices for multi. difficulty=Basic|Conceptual|Applied. wrongExplanations={index:"explanation"} for incorrect choices.`;
+      const raw=await claudeCall(SYS,`Parse these questions:\n\n${text.slice(0,8000)}`);
+      const parsed=parseJSON(raw);
+      setPreview(parsed.map((q,i)=>({...q,id:'uq'+i+Date.now(),standards:[],image:null,checked:true,tolerance:0.5,correctMulti:q.correctMulti||[],wrongExplanations:q.wrongExplanations||{}})));
+      setState('preview');
+    }catch(e){setErr('Could not parse questions.');setState('error');}
+  }
+
+  if(state==='loading') return <div className="card mb12" style={{textAlign:'center',padding:22,border:'2px dashed #c7d2fe',background:'#f8f7ff'}}><Spinner/><div style={{marginTop:8,fontWeight:600,color:'#4F46E5'}}>Parsing questions with AI…</div></div>;
+  if(state==='error') return <div className="info-box info-error flex-between mb8"><span>⚠ {err}</span><button className="btn btn-ghost btn-sm" onClick={()=>setState('idle')}>Try again</button></div>;
+  if(state==='preview') return(
+    <div className="card mb12" style={{border:'1.5px solid #a5b4fc'}}>
+      <div className="flex-between mb12">
+        <div><div className="fw7" style={{fontSize:14}}>AI parsed {preview.length} questions</div><div className="text-sm text-muted">Review then import.</div></div>
+        <div className="flex gap8"><button className="btn btn-primary btn-sm" onClick={()=>{onAdd(preview.filter(q=>q.checked));setState('idle');setPreview([]);}}>Import selected</button><button className="btn btn-ghost btn-sm" onClick={()=>{setState('idle');setPreview([]);}}>Cancel</button></div>
+      </div>
+      <div style={{maxHeight:300,overflowY:'auto'}}>
+        {preview.map((q,i)=>(
+          <div key={q.id} className={`preview-item ${q.checked?'checked':''}`} onClick={()=>setPreview(prev=>prev.map((x,j)=>j===i?{...x,checked:!x.checked}:x))}>
+            <input type="checkbox" checked={q.checked} onChange={()=>{}} style={{marginTop:2,accentColor:'#4F46E5',flexShrink:0}}/>
+            <div style={{flex:1}}>
+              <div className="fw6" style={{fontSize:14}}>{q.text}</div>
+              <div className="flex gap4 mt4 flex-wrap"><span className="tag tag-blue">{q.format==='multi'?'Multi-select':q.format==='mc'?'MC':'Numeric'}</span><span className="tag tag-gray">{q.difficulty}</span></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return(
+    <div className="drop-zone-sm mb12" onClick={()=>fileRef.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)processFile(f);}}>
+      <input ref={fileRef} type="file" accept=".txt,.md" style={{display:'none'}} onChange={e=>{if(e.target.files[0])processFile(e.target.files[0]);e.target.value='';}}/>
+      <div className="fw6 text-sm" style={{color:'#6d28d9'}}>📂 Upload question bank (.txt or .md)</div>
+      <div className="text-xs text-muted">AI parses questions & auto-detects answers</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ASSESSMENT BUILDER MODAL
+// ═══════════════════════════════════════════════════════════
+function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSaveSettings,onClose}){
+  const [view,setView]=useState('list');
+  const [localQs,setLocalQs]=useState(initQuestions);
+  const [editQId,setEditQId]=useState(null);
+  const [randomize,setRandomize]=useState(assessment.randomize||false);
+  const [timeLimit,setTimeLimit]=useState(assessment.timeLimit||20);
+  const [addTimeVal,setAddTimeVal]=useState(5);
+  const [settingsSaved,setSettingsSaved]=useState(false);
+  const [genState,setGenState]=useState('idle');
+  const [genErr,setGenErr]=useState('');
+
+  const asmStds=standards;
+  const coverage={};
+  asmStds.forEach(s=>{coverage[s.id]={Basic:0,Conceptual:0,Applied:0};});
+  localQs.forEach(q=>{q.standards.forEach(sid=>{if(coverage[sid])coverage[sid][q.difficulty]=(coverage[sid][q.difficulty]||0)+1;});});
+  const missing=[];
+  asmStds.filter(s=>assessment.standards.includes(s.id)).forEach(s=>['Basic','Conceptual','Applied'].forEach(d=>{if(!(coverage[s.id]?.[d]))missing.push(`${s.code} ${d}`);}));
+
+  async function generateVariants(){
+    if(!localQs.length){setGenErr('Add at least one question first.');return;}
+    setGenState('loading');setGenErr('');
+    try{
+      const SYS=`Generate one VARIANT per question. Same concept, same difficulty, same format, DIFFERENT wording and numbers. Return ONLY a JSON array with same schema: [{text,format,choices,correct,correctMulti,difficulty,explanation,standards,wrongExplanations}]. Do not copy exact wording.`;
+      const input=localQs.map(q=>({text:q.text,format:q.format,choices:q.choices||[],correct:q.correct,correctMulti:q.correctMulti||[],difficulty:q.difficulty,explanation:q.explanation,standards:q.standards,wrongExplanations:q.wrongExplanations||{}}));
+      const raw=await claudeCall(SYS,`Generate one variant per question:\n\n${JSON.stringify(input)}`,2000);
+      const parsed=parseJSON(raw);
+      const variants=parsed.map((q,i)=>({...q,id:'var'+i+Date.now(),image:null,tolerance:localQs[i]?.tolerance||0.5,isAiVariant:true,correctMulti:q.correctMulti||[],wrongExplanations:q.wrongExplanations||{}}));
+      setLocalQs(prev=>[...prev,...variants]);
+      setGenState('done');setTimeout(()=>setGenState('idle'),3000);
+    }catch(e){setGenErr('AI generation failed.');setGenState('idle');}
+  }
+
+  if(view==='qform') return(
+    <div>
+      <button className="btn btn-ghost mb16" onClick={()=>{setView('list');setEditQId(null);}}>← Back to questions</button>
+      <div className="fw7 mb16" style={{fontSize:17}}>{editQId?'Edit question':'New question'}</div>
+      <QuestionForm
+        initQ={editQId?localQs.find(q=>q.id===editQId):null}
+        standards={standards}
+        onSave={q=>{if(editQId)setLocalQs(prev=>prev.map(x=>x.id===editQId?q:x));else setLocalQs(prev=>[...prev,q]);setView('list');setEditQId(null);}}
+        onCancel={()=>{setView('list');setEditQId(null);}}
+      />
+    </div>
+  );
+
+  return(
+    <div>
+      <button className="btn btn-ghost mb16" onClick={onClose}>← Back to units</button>
+      <div className="flex-between mb16">
+        <div><div className="fw7" style={{fontSize:18}}>{assessment.title}</div><div className="text-sm text-muted">{assessment.desc}</div></div>
+        <div className="flex gap8">
+          <button className="btn btn-secondary btn-sm" onClick={()=>{setView('qform');setEditQId(null);}}>+ Add question</button>
+          <button className="btn btn-secondary btn-sm" style={{borderColor:'#7c3aed',color:'#7c3aed'}} onClick={generateVariants} disabled={genState==='loading'}>
+            {genState==='loading'?<><Spinner/> Generating…</>:genState==='done'?'✓ Variants added':'✦ Generate AI variants'}
+          </button>
+        </div>
+      </div>
+
+      {/* Settings card */}
+      <div className="card mb16" style={{padding:'14px 18px'}}>
+        <div className="flex-between mb12">
+          <span className="text-xs fw7" style={{color:'#6b7280',textTransform:'uppercase',letterSpacing:'.5px'}}>Assessment settings</span>
+          <div className="flex gap8 items-center">
+            {settingsSaved&&<span className="text-sm" style={{color:'#16a34a',fontWeight:500}}>✓ Saved</span>}
+            <button className="btn btn-primary btn-sm" onClick={()=>{onSaveSettings({randomize,timeLimit});setSettingsSaved(true);setTimeout(()=>setSettingsSaved(false),2500);}}>Save settings</button>
+          </div>
+        </div>
+        <div className="flex gap16 flex-wrap">
+          <div className="flex gap8">
+            <span className="text-sm fw6">Time limit</span>
+            <input type="number" min="1" value={timeLimit} onChange={e=>setTimeLimit(Math.max(1,Number(e.target.value)))} style={{width:60,padding:'4px 8px',border:'1px solid #d1d5db',borderRadius:7,fontSize:14,textAlign:'center'}}/>
+            <span className="text-sm text-muted">min</span>
+          </div>
+          <div className="flex gap8">
+            <span className="text-sm fw6">Add time</span>
+            <input type="number" min="1" value={addTimeVal} onChange={e=>setAddTimeVal(Math.max(1,Number(e.target.value)))} style={{width:50,padding:'4px 8px',border:'1px solid #d1d5db',borderRadius:7,fontSize:14,textAlign:'center'}}/>
+            <span className="text-sm text-muted">min</span>
+            <button className="btn btn-secondary btn-sm" onClick={()=>setTimeLimit(t=>t+addTimeVal)}>+ Add</button>
+          </div>
+          <div className="flex gap8" style={{marginLeft:'auto'}}>
+            <span className="text-sm fw6">Randomize order</span>
+            <Toggle on={randomize} onChange={setRandomize}/>
+            <span className="text-sm" style={{color:randomize?'#4F46E5':'#9ca3af'}}>{randomize?'On':'Off'}</span>
+          </div>
+        </div>
+      </div>
+
+      <QuestionBankUploader standards={asmStds} onAdd={qs=>setLocalQs(prev=>[...prev,...qs])}/>
+      {genErr&&<div className="info-box info-warn mb12">{genErr}</div>}
+
+      {/* Coverage matrix */}
+      <div className="card mb20">
+        <div className="text-xs fw7 mb10" style={{color:'#6b7280',textTransform:'uppercase',letterSpacing:'.5px'}}>Coverage matrix</div>
+        {missing.length>0&&<div className="info-box info-warn mb8">⚠ Missing: {missing.join(', ')}</div>}
+        <table className="cov-table">
+          <thead><tr><th style={{textAlign:'left'}}>Standard</th><th>Basic (1×)</th><th>Conceptual (2×)</th><th>Applied (3×)</th></tr></thead>
+          <tbody>
+            {asmStds.filter(s=>assessment.standards.includes(s.id)).map(s=>(
+              <tr key={s.id}><td style={{textAlign:'left'}}><span className="std-badge">{s.code}</span> {s.title}</td>
+                {['Basic','Conceptual','Applied'].map(d=>{const n=coverage[s.id]?.[d]||0;return<td key={d}><span className={n>0?'cov-ok':'cov-warn'}>{n}</span></td>;})}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex gap8 mt14">
+          <button className="btn btn-primary btn-sm" disabled={missing.length>0} onClick={()=>onSave(localQs,true,{randomize,timeLimit})}>Publish</button>
+          {missing.length>0&&<button className="btn btn-secondary btn-sm" onClick={()=>onSave(localQs,true,{randomize,timeLimit})}>Override & publish anyway</button>}
+          <button className="btn btn-ghost btn-sm" onClick={()=>onSave(localQs,false,{randomize,timeLimit})}>Save draft</button>
+        </div>
+      </div>
+
+      {localQs.length===0&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:28}}>No questions yet.</div>}
+      {localQs.map((q,i)=>(
+        <div key={q.id} style={{border:`1px solid ${q.isAiVariant?'#ddd6fe':'#e5e7eb'}`,borderRadius:10,padding:'11px 15px',marginBottom:8,background:q.isAiVariant?'#faf5ff':'#fff',display:'flex',gap:12,alignItems:'flex-start'}}>
+          <div style={{width:26,height:26,borderRadius:7,background:q.isAiVariant?'#ede9fe':'#f0f0ff',color:q.isAiVariant?'#7c3aed':'#4F46E5',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,flexShrink:0}}>{i+1}</div>
+          <div style={{flex:1}}>
+            <div className="fw6" style={{fontSize:14}}>{q.text}</div>
+            {q.image&&<img src={q.image} alt="" style={{maxHeight:50,borderRadius:5,marginTop:5,border:'1px solid #e5e7eb'}}/>}
+            <div className="flex gap4 mt6 flex-wrap">
+              <span className="tag tag-blue">{q.format==='multi'?'Multi-select':q.format==='mc'?'MC':'Numeric'}</span>
+              <span className={`tag ${q.difficulty==='Basic'?'tag-green':q.difficulty==='Conceptual'?'tag-yellow':'tag-gray'}`}>{q.difficulty} ({WEIGHTS[q.difficulty]}×)</span>
+              {q.isAiVariant&&<span className="tag tag-purple">✦ AI variant</span>}
+              {q.standards.map(sid=>{const s=asmStds.find(x=>x.id===sid);return s?<span key={sid} className="std-badge">{s.code}</span>:null;})}
+            </div>
+          </div>
+          <div className="flex gap4">
+            <button className="btn btn-ghost btn-sm" onClick={()=>{setEditQId(q.id);setView('qform');}}>Edit</button>
+            <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>setLocalQs(prev=>prev.filter(x=>x.id!==q.id))}>✕</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ASSESSMENT GATING SETTINGS
+// ═══════════════════════════════════════════════════════════
+function AssessmentGateSettings({assessment,units,onChange}){
+  const allAsms=units.flatMap(u=>u.assessments).filter(a=>a.id!==assessment.id);
+  return(
+    <div style={{borderTop:'1px solid #f3f4f6',paddingTop:14,marginTop:14}}>
+      <div className="fw6 text-sm mb10">Assessment unlock gate</div>
+      <div className="grid2" style={{gap:8}}>
+        <div><label>Prerequisite assessment</label>
+          <select className="select mt4" value={assessment.prerequisiteId||''} onChange={e=>onChange({prerequisiteId:e.target.value||null})}>
+            <option value="">None (always unlocked)</option>
+            {allAsms.map(a=><option key={a.id} value={a.id}>{a.title}</option>)}
+          </select></div>
+        <div><label>Minimum grade to unlock (%)</label>
+          <input className="input mt4" type="number" min="0" max="100" value={assessment.prerequisiteGrade||0} onChange={e=>onChange({prerequisiteGrade:Math.min(100,Math.max(0,Number(e.target.value)))})} disabled={!assessment.prerequisiteId}/>
+        </div>
+      </div>
+      {assessment.prerequisiteId&&<div className="text-xs text-muted mt8">Students need {assessment.prerequisiteGrade||0}% on the prerequisite to unlock this assessment.</div>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// UNITS MANAGER
+// ═══════════════════════════════════════════════════════════
+function UnitsManager({standards,units,questions,setUnits,setQuestions}){
+  const [openBuilder,setOpenBuilder]=useState(null);
+  const [showNewUnit,setShowNewUnit]=useState(false);
+  const [newUnitForm,setNewUnitForm]=useState({name:'',desc:''});
+  const [showNewAsm,setShowNewAsm]=useState({});
+  const [newAsmForms,setNewAsmForms]=useState({});
+
+  function addUnit(){if(!newUnitForm.name)return;setUnits(prev=>[...prev,{id:'u'+Date.now(),name:newUnitForm.name,desc:newUnitForm.desc,collapsed:false,assessments:[]}]);setNewUnitForm({name:'',desc:''});setShowNewUnit(false);}
+  function addAsm(uid){const f=newAsmForms[uid]||{};if(!f.title)return;const a={id:'a'+Date.now(),title:f.title,desc:f.desc||'',timeLimit:Number(f.timeLimit)||20,standards:standards.map(s=>s.id),questionIds:[],published:false,randomize:false,prerequisiteId:null,prerequisiteGrade:0};setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:[...u.assessments,a]}:u));setNewAsmForms(p=>({...p,[uid]:{}}));setShowNewAsm(p=>({...p,[uid]:false}));}
+  function updateAsm(uid,aid,patch){setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,...patch}:a)}:u));}
+
+  function handleBuilderSave(uid,aid,newQs,publish,settings){
+    const newIds=newQs.map(q=>q.id);
+    setQuestions(prev=>[...prev.filter(q=>!newIds.includes(q.id)),...newQs]);
+    updateAsm(uid,aid,{questionIds:newQs.map(q=>q.id),published:publish,randomize:settings?.randomize,timeLimit:settings?.timeLimit});
+    setOpenBuilder(null);
+  }
+
+  if(openBuilder){
+    const unit=units.find(u=>u.id===openBuilder.uid);
+    const asm=unit?.assessments.find(a=>a.id===openBuilder.aid);
+    if(!asm) return null;
+    const asmQs=questions.filter(q=>asm.questionIds.includes(q.id));
+    return(
+      <div>
+        <AssessmentBuilderModal assessment={asm} standards={standards} initQuestions={asmQs}
+          onSave={(qs,pub,settings)=>handleBuilderSave(openBuilder.uid,openBuilder.aid,qs,pub,settings)}
+          onSaveSettings={settings=>updateAsm(openBuilder.uid,openBuilder.aid,settings)}
+          onClose={()=>setOpenBuilder(null)}
+        />
+        <div className="card mt16">
+          <AssessmentGateSettings assessment={asm} units={units} onChange={patch=>updateAsm(openBuilder.uid,openBuilder.aid,patch)}/>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div>
+      <div className="flex-between mb16">
+        <div><div className="section-title">Assessments</div><div className="section-sub" style={{marginBottom:0}}>Organize by unit. Set unlock rules per assessment.</div></div>
+        <button className="btn btn-primary btn-sm" onClick={()=>setShowNewUnit(true)}>+ New unit</button>
+      </div>
+      {showNewUnit&&(
+        <div className="card mb16" style={{border:'1.5px solid #a5b4fc'}}>
+          <div className="fw6 mb12">New unit</div>
+          <label>Unit name</label><input className="input mt4 mb8" value={newUnitForm.name} onChange={e=>setNewUnitForm(f=>({...f,name:e.target.value}))} placeholder="Unit 3: Integrals"/>
+          <label>Description (optional)</label><input className="input mt4 mb12" value={newUnitForm.desc} onChange={e=>setNewUnitForm(f=>({...f,desc:e.target.value}))} placeholder="Brief description…"/>
+          <div className="flex gap8"><button className="btn btn-primary btn-sm" onClick={addUnit}>Create unit</button><button className="btn btn-ghost btn-sm" onClick={()=>setShowNewUnit(false)}>Cancel</button></div>
+        </div>
+      )}
+      {units.length===0&&!showNewUnit&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:36}}>No units yet. Click "+ New unit" to get started.</div>}
+      {units.map(unit=>(
+        <div key={unit.id} className="unit-card">
+          <div className="unit-hdr" onClick={()=>setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,collapsed:!u.collapsed}:u))}>
+            <div style={{flex:1}}><div className="fw7" style={{fontSize:16}}>{unit.name}</div>{unit.desc&&<div className="text-sm text-muted">{unit.desc}</div>}</div>
+            <div className="flex gap8">
+              <span className="tag tag-gray">{unit.assessments.length} assessment{unit.assessments.length!==1?'s':''}</span>
+              <span className="text-muted" style={{fontSize:13}}>{unit.collapsed?'▼':'▲'}</span>
+              <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={e=>{e.stopPropagation();if(window.confirm('Delete this unit?'))setUnits(prev=>prev.filter(u=>u.id!==unit.id));}}>✕</button>
+            </div>
+          </div>
+          {!unit.collapsed&&(
+            <div className="unit-body">
+              {unit.assessments.length===0&&<div className="text-sm text-muted" style={{padding:'6px 0 12px'}}>No assessments yet.</div>}
+              {unit.assessments.map(asm=>{
+                const qCount=asm.questionIds.length;
+                const prereqAsm=asm.prerequisiteId?units.flatMap(u=>u.assessments).find(a=>a.id===asm.prerequisiteId):null;
+                return(
+                  <div key={asm.id} className="asm-card">
+                    <div style={{flex:1}}>
+                      <div className="fw6" style={{fontSize:15}}>{asm.title}</div>
+                      {asm.desc&&<div className="text-sm text-muted mt4">{asm.desc}</div>}
+                      <div className="flex gap6 mt6 flex-wrap">
+                        <span className="tag tag-gray">⏱ {asm.timeLimit} min</span>
+                        <span className="tag tag-gray">{qCount} Q</span>
+                        {asm.randomize&&<span className="tag tag-blue">🔀</span>}
+                        <span className={`tag ${asm.published?'tag-green':'tag-yellow'}`}>{asm.published?'Published':'Draft'}</span>
+                        {prereqAsm&&<span className="tag tag-purple">🔒 Requires {asm.prerequisiteGrade||0}% on "{prereqAsm.title}"</span>}
+                      </div>
+                    </div>
+                    <div className="flex gap6">
+                      <button className="btn btn-primary btn-sm" onClick={()=>setOpenBuilder({uid:unit.id,aid:asm.id})}>Open builder</button>
+                      <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,assessments:u.assessments.filter(a=>a.id!==asm.id)}:u))}>✕</button>
+                    </div>
+                  </div>
+                );
+              })}
+              {showNewAsm[unit.id]?(
+                <div style={{border:'1px dashed #c7d2fe',borderRadius:10,padding:'14px 16px',background:'#f8f7ff',marginTop:8}}>
+                  <div className="fw6 mb10">New assessment</div>
+                  <div className="grid2" style={{gap:8}}>
+                    <div style={{gridColumn:'span 2'}}><label>Title</label><input className="input mt4" value={newAsmForms[unit.id]?.title||''} onChange={e=>setNewAsmForms(p=>({...p,[unit.id]:{...p[unit.id],title:e.target.value}}))} placeholder="Week 5 Quiz"/></div>
+                    <div><label>Description</label><input className="input mt4" value={newAsmForms[unit.id]?.desc||''} onChange={e=>setNewAsmForms(p=>({...p,[unit.id]:{...p[unit.id],desc:e.target.value}}))} placeholder="Optional…"/></div>
+                    <div><label>Time limit (min)</label><input className="input mt4" type="number" value={newAsmForms[unit.id]?.timeLimit||'20'} onChange={e=>setNewAsmForms(p=>({...p,[unit.id]:{...p[unit.id],timeLimit:e.target.value}}))}/></div>
+                  </div>
+                  <div className="flex gap8 mt12"><button className="btn btn-primary btn-sm" onClick={()=>addAsm(unit.id)}>Create</button><button className="btn btn-ghost btn-sm" onClick={()=>setShowNewAsm(p=>({...p,[unit.id]:false}))}>Cancel</button></div>
+                </div>
+              ):(
+                <button className="btn btn-secondary btn-sm mt8" onClick={()=>setShowNewAsm(p=>({...p,[unit.id]:true}))}>+ Add assessment</button>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIDEO LIBRARY
+// ═══════════════════════════════════════════════════════════
+function VideoLibrary({standards,videos,setVideos}){
+  const [form,setForm]=useState({title:'',desc:'',url:'',standards:[],thumb:'▶'});
+  const [editId,setEditId]=useState(null);
+  const [editForm,setEditForm]=useState({});
+  const emojis=['▶','📐','🔗','✖️','🔬','🚛','⚡','🧠','📊','📌'];
+
+  function addVideo(){if(!form.title||!form.url)return;setVideos(prev=>[...prev,{id:'v'+Date.now(),...form}]);setForm({title:'',desc:'',url:'',standards:[],thumb:'▶'});}
+  function saveEdit(id){setVideos(prev=>prev.map(v=>v.id===id?{...v,...editForm}:v));setEditId(null);}
+
+  function StdPills({selected,onChange}){return(
+    <div className="flex flex-wrap gap6 mt4">
+      {standards.map(s=>{const on=selected.includes(s.id);return<button key={s.id} onClick={()=>onChange(on?selected.filter(x=>x!==s.id):[...selected,s.id])} style={{padding:'3px 9px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',border:'1.5px solid',borderColor:on?'#4F46E5':'#d1d5db',background:on?'#e0e7ff':'#f9fafb',color:on?'#3730a3':'#6b7280'}}>{s.code}</button>;})}
+    </div>
+  );}
+
+  return(
+    <div>
+      <div className="section-title mb4">Video library</div>
+      <div className="section-sub">Tag videos to standards for student recommendations.</div>
+      {videos.map(v=>(
+        <div key={v.id} style={{border:'1px solid #e5e7eb',borderRadius:10,marginBottom:8,background:'#fff',overflow:'hidden'}}>
+          {editId===v.id?(
+            <div style={{padding:'16px'}}>
+              <div className="grid2 mb8" style={{gap:8}}>
+                <div style={{gridColumn:'span 2'}}><label>Title</label><input className="input mt4" value={editForm.title||''} onChange={e=>setEditForm(f=>({...f,title:e.target.value}))}/></div>
+                <div style={{gridColumn:'span 2'}}><label>Description</label><input className="input mt4" value={editForm.desc||''} onChange={e=>setEditForm(f=>({...f,desc:e.target.value}))} placeholder="Shown to students…"/></div>
+                <div style={{gridColumn:'span 2'}}><label>URL</label><input className="input mt4" value={editForm.url||''} onChange={e=>setEditForm(f=>({...f,url:e.target.value}))}/></div>
+                <div><label>Emoji thumb</label><div className="flex flex-wrap gap4 mt4">{emojis.map(e=><button key={e} onClick={()=>setEditForm(f=>({...f,thumb:e}))} style={{fontSize:18,padding:4,borderRadius:6,border:`1.5px solid ${editForm.thumb===e?'#4F46E5':'transparent'}`,background:editForm.thumb===e?'#e0e7ff':'transparent',cursor:'pointer'}}>{e}</button>)}</div></div>
+              </div>
+              <label>Standards</label><StdPills selected={editForm.standards||[]} onChange={s=>setEditForm(f=>({...f,standards:s}))}/>
+              <div className="flex gap8 mt12"><button className="btn btn-primary btn-sm" onClick={()=>saveEdit(v.id)}>Save</button><button className="btn btn-ghost btn-sm" onClick={()=>setEditId(null)}>Cancel</button></div>
+            </div>
+          ):(
+            <div className="video-card">
+              <div className="video-thumb">{v.thumb||'▶'}</div>
+              <div style={{flex:1}}>
+                <div className="fw6" style={{fontSize:14}}>{v.title}</div>
+                {v.desc&&<div className="text-sm text-muted mt4">{v.desc}</div>}
+                <div className="flex gap4 mt4 flex-wrap">{v.standards.map(sid=>{const s=standards.find(x=>x.id===sid);return s?<span key={sid} className="std-badge">{s.code}</span>:null;})}</div>
+              </div>
+              <a href={v.url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm" style={{color:'#4F46E5'}}>Link →</a>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{setEditId(v.id);setEditForm({...v});}}>Edit</button>
+              <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>setVideos(prev=>prev.filter(x=>x.id!==v.id))}>✕</button>
+            </div>
+          )}
+        </div>
+      ))}
+      <div className="card mt16">
+        <div className="fw6 mb12">Add a video</div>
+        <label>Title</label><input className="input mt4 mb8" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="Video title…"/>
+        <label>Description</label><input className="input mt4 mb8" value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="What does this cover?"/>
+        <label>URL</label><input className="input mt4 mb8" value={form.url} onChange={e=>setForm(f=>({...f,url:e.target.value}))} placeholder="https://…"/>
+        <label>Emoji thumbnail</label><div className="flex flex-wrap gap4 mt4 mb8">{emojis.map(e=><button key={e} onClick={()=>setForm(f=>({...f,thumb:e}))} style={{fontSize:18,padding:4,borderRadius:6,border:`1.5px solid ${form.thumb===e?'#4F46E5':'transparent'}`,background:form.thumb===e?'#e0e7ff':'transparent',cursor:'pointer'}}>{e}</button>)}</div>
+        <label>Tag standards</label><div className="flex flex-wrap gap6 mt4 mb12">{standards.map(s=>{const on=form.standards.includes(s.id);return<button key={s.id} onClick={()=>setForm(f=>({...f,standards:on?f.standards.filter(x=>x!==s.id):[...f.standards,s.id]}))} style={{padding:'3px 9px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',border:'1.5px solid',borderColor:on?'#4F46E5':'#d1d5db',background:on?'#e0e7ff':'#f9fafb',color:on?'#3730a3':'#6b7280'}}>{s.code} {s.title}</button>;})}</div>
+        <button className="btn btn-primary" onClick={addVideo}>Add video</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SVG CHART HELPERS
+// ═══════════════════════════════════════════════════════════
+function BarChart({data,width=480,height=180,colorFn}){
+  // data = [{label, value, max}]
+  if(!data||!data.length) return null;
+  const barH=Math.floor((height-40)/data.length)-6;
+  const labelW=130;
+  const barMaxW=width-labelW-60;
+  return(
+    <svg width={width} height={height} style={{display:'block',overflow:'visible'}}>
+      {data.map((d,i)=>{
+        const y=i*(barH+6)+4;
+        const val=Math.max(0,Math.min(100,d.value??0));
+        const barW=Math.round((val/100)*barMaxW);
+        const col=colorFn?colorFn(val):(val>=85?'#16a34a':val>=60?'#ca8a04':'#dc2626');
+        const bg=colorFn?colorFn(val,true):(val>=85?'#dcfce7':val>=60?'#fef9c3':'#fee2e2');
+        return(
+          <g key={i}>
+            <text x={labelW-6} y={y+barH/2+4} textAnchor="end" fontSize={10} fill="#374151" fontFamily="system-ui,sans-serif">{d.label}</text>
+            <rect x={labelW} y={y} width={barMaxW} height={barH} fill="#f3f4f6" rx={4}/>
+            {barW>0&&<rect x={labelW} y={y} width={barW} height={barH} fill={col} rx={4}/>}
+            <text x={labelW+barW+6} y={y+barH/2+4} fontSize={10} fill={col} fontWeight="700" fontFamily="system-ui,sans-serif">{Math.round(val)}%</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function RadarSummary({scores,labels}){
+  // Simple horizontal mastery summary bar
+  const green=scores.filter(s=>s!==null&&s>=0.85).length;
+  const yellow=scores.filter(s=>s!==null&&s>=0.60&&s<0.85).length;
+  const red=scores.filter(s=>s!==null&&s<0.60).length;
+  const total=scores.length;
+  return(
+    <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+      {[['Mastery','#16a34a','#dcfce7',green],['Satisfactory','#ca8a04','#fef9c3',yellow],['Needs Review','#dc2626','#fee2e2',red],['Not tested','#6b7280','#f3f4f6',total-green-yellow-red]].map(([label,color,bg,n])=>(
+        <div key={label} style={{flex:1,minWidth:100,background:bg,border:`1px solid ${color}22`,borderRadius:8,padding:'10px 12px',textAlign:'center'}}>
+          <div style={{fontSize:24,fontWeight:800,color}}>{n}</div>
+          <div style={{fontSize:11,color,fontWeight:600}}>{label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AttemptScoreChart({attempts,questions,title}){
+  // Line of scores over attempts
+  if(!attempts.length) return null;
+  const scores=attempts.map(att=>{
+    const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
+    const {overall}=scoreAttempt(att,qs);
+    return overall.total>0?Math.round(overall.earned/overall.total*100):0;
+  });
+  const W=400,H=100,pad=30;
+  const maxVal=100;
+  const pts=scores.map((s,i)=>{
+    const x=pad+(i/(Math.max(scores.length-1,1)))*(W-pad*2);
+    const y=H-pad-(s/maxVal)*(H-pad*2);
+    return{x,y,s};
+  });
+  const pathD=pts.map((p,i)=>`${i===0?'M':'L'}${p.x},${p.y}`).join(' ');
+  return(
+    <svg width={W} height={H} style={{display:'block'}}>
+      {/* Gridlines */}
+      {[0,25,50,75,100].map(v=>{
+        const y=H-pad-(v/100)*(H-pad*2);
+        return<g key={v}><line x1={pad} y1={y} x2={W-pad} y2={y} stroke="#e5e7eb" strokeWidth={1}/><text x={pad-4} y={y+4} fontSize={9} textAnchor="end" fill="#9ca3af">{v}%</text></g>;
+      })}
+      {/* 60% and 85% threshold lines */}
+      {[{v:60,col:'#ca8a04'},{v:85,col:'#16a34a'}].map(({v,col})=>{
+        const y=H-pad-(v/100)*(H-pad*2);
+        return<line key={v} x1={pad} y1={y} x2={W-pad} y2={y} stroke={col} strokeWidth={1} strokeDasharray="4,3" opacity={0.6}/>;
+      })}
+      {pts.length>1&&<path d={pathD} fill="none" stroke="#4F46E5" strokeWidth={2}/>}
+      {pts.map((p,i)=>(
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r={4} fill="#4F46E5"/>
+          <text x={p.x} y={p.y-7} fontSize={9} textAnchor="middle" fill="#374151" fontWeight="600">{p.s}%</text>
+          <text x={p.x} y={H-4} fontSize={8} textAnchor="middle" fill="#9ca3af">A{i+1}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// ── Print: Student Course Report ──────────────────────────────
+function printStudentCourseReport({student,course,attempts,questions,standards,units}){
+  const myAttempts=attempts.filter(a=>a.studentId===student.id);
+  const best=bestMastery(myAttempts,student.id,questions);
+  const allAsms=units.flatMap(u=>u.assessments);
+
+  const masteryData=standards.map(s=>({
+    label:`${s.code}: ${s.title.slice(0,22)}${s.title.length>22?'…':''}`,
+    value:best[s.id]!=null?Math.round(best[s.id]*100):0,
+  }));
+
+  const chartH=Math.max(140,standards.length*30+20);
+  const barSvg=renderToSVGString(masteryData,chartH);
+  const summaryScores=standards.map(s=>best[s.id]??null);
+
+  const attemptRows=myAttempts.map(att=>{
+    const asm=allAsms.find(a=>a.id===att.assessmentId);
+    const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
+    const {overall}=scoreAttempt(att,qs);
+    const pct=overall.total>0?Math.round(overall.earned/overall.total*100):0;
+    const col=pct>=85?'#166534':pct>=60?'#854d0e':'#991b1b';
+    const bg=pct>=85?'#dcfce7':pct>=60?'#fef9c3':'#fee2e2';
+    return `<tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;">${asm?.title||'Assessment'}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;">${new Date(att.submittedAt).toLocaleDateString()}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;text-align:center;"><span style="background:${bg};color:${col};padding:2px 10px;border-radius:12px;font-weight:700;font-size:13px;">${pct}%</span></td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;text-align:center;">${overall.earned}/${overall.total}</td>
+    </tr>`;
+  }).join('');
+
+  const stdRows=standards.map(s=>{
+    const score=best[s.id];
+    const pct=score!=null?Math.round(score*100):null;
+    const level=masteryLevel(score);
+    const col={green:'#166534',yellow:'#854d0e',red:'#991b1b',untested:'#6b7280'}[level];
+    const bg={green:'#dcfce7',yellow:'#fef9c3',red:'#fee2e2',untested:'#f3f4f6'}[level];
+    const icon={green:'✓',yellow:'◐',red:'⚠',untested:'—'}[level];
+    const lbl={green:'Mastery',yellow:'Satisfactory',red:'Needs Review',untested:'Not tested'}[level];
+    return `<tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;"><strong>${s.code}</strong></td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;">${s.title}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:center;">${pct!=null?pct+'%':'—'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:center;"><span style="background:${bg};color:${col};padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;">${icon} ${lbl}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Summary counts
+  const counts={green:0,yellow:0,red:0,untested:0};
+  standards.forEach(s=>{counts[masteryLevel(best[s.id])]++;});
+
+  const html=`<!DOCTYPE html><html><head><title>Progress Report — ${student.name}</title>
+  <style>
+    body{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;color:#1a1a18;margin:0;padding:24px;background:#fff}
+    h1{font-size:22px;font-weight:800;color:#1a1a18;margin:0 0 4px}
+    h2{font-size:15px;font-weight:700;color:#374151;margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid #e5e7eb}
+    .meta{font-size:12px;color:#6b7280;margin-bottom:24px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #4F46E5}
+    .logo{font-size:18px;font-weight:800;color:#4F46E5}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:#f4f3ef;padding:8px 10px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280}
+    .summary-box{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+    .s-box{flex:1;min-width:90px;border-radius:8px;padding:12px;text-align:center}
+    .s-num{font-size:26px;font-weight:800}
+    .s-lbl{font-size:11px;font-weight:600;margin-top:2px}
+    .chart-wrap{background:#f9f9f9;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:20px}
+    @page{margin:1.5cm;size:A4}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <div class="header">
+    <div>
+      <div class="logo">MasteryTrack</div>
+      <h1>${student.name}</h1>
+      <div class="meta">${course.name} &nbsp;|&nbsp; Report generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:#9ca3af">Total attempts</div>
+      <div style="font-size:28px;font-weight:800;color:#4F46E5">${myAttempts.length}</div>
+    </div>
+  </div>
+
+  <h2>Mastery Summary</h2>
+  <div class="summary-box">
+    <div class="s-box" style="background:#dcfce7;border:1px solid #bbf7d0"><div class="s-num" style="color:#166534">${counts.green}</div><div class="s-lbl" style="color:#166534">✓ Mastery</div></div>
+    <div class="s-box" style="background:#fef9c3;border:1px solid #fde68a"><div class="s-num" style="color:#854d0e">${counts.yellow}</div><div class="s-lbl" style="color:#854d0e">◐ Satisfactory</div></div>
+    <div class="s-box" style="background:#fee2e2;border:1px solid #fecaca"><div class="s-num" style="color:#991b1b">${counts.red}</div><div class="s-lbl" style="color:#991b1b">⚠ Needs Review</div></div>
+    <div class="s-box" style="background:#f3f4f6;border:1px solid #e5e7eb"><div class="s-num" style="color:#6b7280">${counts.untested}</div><div class="s-lbl" style="color:#6b7280">— Not tested</div></div>
+  </div>
+
+  <h2>Standards Performance</h2>
+  <div class="chart-wrap">${barSvg}</div>
+  <table><thead><tr><th>Code</th><th>Standard</th><th>Best Score</th><th>Level</th></tr></thead><tbody>${stdRows}</tbody></table>
+
+  <h2>Attempt History</h2>
+  ${myAttempts.length===0?'<p style="color:#9ca3af">No attempts yet.</p>':''}
+  ${myAttempts.length>0?`<table><thead><tr><th>Assessment</th><th>Date</th><th>Score %</th><th>Correct</th></tr></thead><tbody>${attemptRows}</tbody></table>`:''}
+  </body></html>`;
+
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),600);
+}
+
+// ── Print: Single Assessment Attempt Report ───────────────────
+function printAssessmentReport({student,attempt,assessment,questions,standards}){
+  const qs=questions.filter(q=>attempt.answers.hasOwnProperty(q.id));
+  const {stdScores,overall}=scoreAttempt(attempt,qs);
+  const pct=overall.total>0?Math.round(overall.earned/overall.total*100):0;
+  const asmStds=standards.filter(s=>assessment.standards.includes(s.id));
+
+  const barSvg=renderToSVGString(
+    asmStds.map(s=>({
+      label:`${s.code}: ${s.title.slice(0,22)}${s.title.length>22?'…':''}`,
+      value:stdScores[s.id]!=null?Math.round(stdScores[s.id]*100):0,
+    })),
+    Math.max(120,asmStds.length*30+20)
+  );
+
+  const stdRows=asmStds.map(s=>{
+    const score=stdScores[s.id];
+    const pct2=score!=null?Math.round(score*100):null;
+    const level=masteryLevel(score);
+    const col={green:'#166534',yellow:'#854d0e',red:'#991b1b',untested:'#6b7280'}[level];
+    const bg={green:'#dcfce7',yellow:'#fef9c3',red:'#fee2e2',untested:'#f3f4f6'}[level];
+    const icon={green:'✓',yellow:'◐',red:'⚠',untested:'—'}[level];
+    const lbl={green:'Mastery',yellow:'Satisfactory',red:'Needs Review',untested:'Not tested'}[level];
+    return `<tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0"><strong>${s.code}</strong></td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0">${s.title}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:center">${pct2!=null?pct2+'%':'—'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:center"><span style="background:${bg};color:${col};padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600">${icon} ${lbl}</span></td>
+    </tr>`;
+  }).join('');
+
+  const qRows=qs.map((q,i)=>{
+    const ans=attempt.answers[q.id];
+    const ok=isCorrect(q,ans);
+    const ansText=q.format==='mc'?q.choices[Number(ans)]||'—':q.format==='multi'?(Array.isArray(ans)?ans.map(i=>q.choices[i]).join(', '):'—'):String(ans??'—');
+    const corrText=q.format==='mc'?q.choices[q.correct]:q.format==='multi'?(q.correctMulti||[]).map(i=>q.choices[i]).join(', '):String(q.correct);
+    return `<tr style="background:${ok?'#f0fdf4':'#fff7f7'}">
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;font-weight:600;font-size:11px;color:#6b7280">${i+1}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0">${q.text.slice(0,80)}${q.text.length>80?'…':''}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;text-align:center">${ok?'<span style="color:#16a34a;font-weight:700">✓</span>':'<span style="color:#dc2626;font-weight:700">✗</span>'}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0f0f0;font-size:12px">${ok?'—':corrText}</td>
+    </tr>`;
+  }).join('');
+
+  const scoreCol=pct>=85?'#166534':pct>=60?'#854d0e':'#991b1b';
+  const scoreBg=pct>=85?'#dcfce7':pct>=60?'#fef9c3':'#fee2e2';
+
+  const html=`<!DOCTYPE html><html><head><title>Assessment Report — ${student.name}</title>
+  <style>
+    body{font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;color:#1a1a18;margin:0;padding:24px;background:#fff}
+    h1{font-size:20px;font-weight:800;margin:0 0 4px}
+    h2{font-size:15px;font-weight:700;color:#374151;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid #e5e7eb}
+    .meta{font-size:12px;color:#6b7280;margin-bottom:20px}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:3px solid #4F46E5}
+    .logo{font-size:18px;font-weight:800;color:#4F46E5}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:#f4f3ef;padding:8px 10px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#6b7280}
+    .score-badge{display:inline-block;padding:8px 20px;border-radius:10px;font-size:28px;font-weight:800}
+    .chart-wrap{background:#f9f9f9;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:20px}
+    @page{margin:1.5cm;size:A4}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <div class="header">
+    <div>
+      <div class="logo">MasteryTrack</div>
+      <h1>${assessment.title}</h1>
+      <div class="meta">
+        Student: <strong>${student.name}</strong> &nbsp;|&nbsp;
+        Date: ${new Date(attempt.submittedAt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} &nbsp;|&nbsp;
+        ${attempt.timeExpired?'<span style="color:#dc2626">Time expired</span>':'Completed'}
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="score-badge" style="background:${scoreBg};color:${scoreCol}">${pct}%</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:4px">${overall.earned} / ${overall.total} correct</div>
+    </div>
+  </div>
+
+  <h2>Performance by Standard</h2>
+  <div class="chart-wrap">${barSvg}</div>
+  <table><thead><tr><th>Code</th><th>Standard</th><th>Score</th><th>Level</th></tr></thead><tbody>${stdRows}</tbody></table>
+
+  <h2>Question-by-Question Breakdown</h2>
+  <table><thead><tr><th>#</th><th>Question</th><th>Result</th><th>Correct Answer</th></tr></thead><tbody>${qRows}</tbody></table>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),600);
+}
+
+// Helper: render bar chart to SVG string
+function renderToSVGString(data,height=180){
+  if(!data||!data.length) return '';
+  const width=520;
+  const barH=Math.max(16,Math.floor((height-20)/data.length)-5);
+  const labelW=140;
+  const barMaxW=width-labelW-55;
+  const rows=data.map((d,i)=>{
+    const y=i*(barH+5)+4;
+    const val=Math.max(0,Math.min(100,d.value??0));
+    const barW=Math.round((val/100)*barMaxW);
+    const col=val>=85?'#16a34a':val>=60?'#ca8a04':'#dc2626';
+    return `<text x="${labelW-6}" y="${y+barH/2+4}" text-anchor="end" font-size="10" fill="#374151" font-family="system-ui,sans-serif">${d.label}</text>
+    <rect x="${labelW}" y="${y}" width="${barMaxW}" height="${barH}" fill="#f3f4f6" rx="4"/>
+    ${barW>0?`<rect x="${labelW}" y="${y}" width="${barW}" height="${barH}" fill="${col}" rx="4"/>`:''}
+    <text x="${labelW+barW+6}" y="${y+barH/2+4}" font-size="10" fill="${col}" font-weight="700" font-family="system-ui,sans-serif">${Math.round(val)}%</text>`;
+  }).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">${rows}</svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// INSTRUCTOR DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function InstructorDashboard({attempts,standards,questions,courseName,units}){
+  const students=[...new Map(attempts.map(a=>[a.studentId,{id:a.studentId,name:a.studentName}])).values()];
+  const [sel,setSel]=useState(null);
+
+  if(sel){
+    const stuAttempts=attempts.filter(a=>a.studentId===sel.id);
+    const best=bestMastery(attempts.filter(a=>a.studentId===sel.id),sel.id,questions);
+    return(
+      <div>
+        <div className="flex-between mb16">
+          <button className="btn btn-ghost" onClick={()=>setSel(null)}>← All students</button>
+          <div className="flex gap8">
+            <button className="print-btn no-print" onClick={()=>printStudentCourseReport({student:sel,course:{name:courseName||'Course'},attempts:stuAttempts,questions,standards,units:units||[]})}>
+              🖨 Print course report
+            </button>
+          </div>
+        </div>
+        <div className="section-title">{sel.name}</div>
+        <div className="section-sub">{stuAttempts.length} attempt{stuAttempts.length!==1?'s':''}</div>
+        <div className="card mb16">
+          <div className="fw6 mb12">Best mastery per standard</div>
+          {standards.map(s=>(
+            <div key={s.id} className="flex-between" style={{padding:'8px 0',borderBottom:'1px solid #f3f4f6'}}>
+              <div><span className="std-badge">{s.code}</span> <span style={{fontSize:14}}>{s.title}</span></div>
+              <MasteryCell score={best[s.id]}/>
+            </div>
+          ))}
+        </div>
+        <div className="fw6 mb10">Attempt history</div>
+        {stuAttempts.map((att,i)=>{
+          const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
+          const {overall}=scoreAttempt(att,qs);
+          const asmId=att.assessmentId;
+          // Find assessment across all units (passed via closure — not available here, so we use a minimal stub)
+          return(
+            <div key={att.id} className="card mb8 flex-between">
+              <div><div className="fw6">Attempt {i+1}</div><div className="text-xs text-muted">{new Date(att.submittedAt).toLocaleString()}</div></div>
+              <div className="flex gap8">
+                <span className="tag tag-blue">{overall.earned}/{overall.total} ({overall.total>0?Math.round(overall.earned/overall.total*100):0}%)</span>
+                <button className="print-btn no-print" style={{fontSize:12,padding:'4px 10px'}} onClick={()=>printAssessmentReport({student:sel,attempt:att,assessment:{id:asmId,title:'Assessment '+String(i+1),standards:standards.map(s=>s.id),timeLimit:20},questions,standards})}>
+                  🖨 Print
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return(
+    <div>
+      <div className="section-title mb4">Student roster</div>
+      <div className="section-sub">{students.length} student{students.length!==1?'s':''} have taken an assessment.</div>
+      {students.length===0&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:32}}>No student data yet.</div>}
+      {students.map(stu=>{
+        const best=bestMastery(attempts.filter(a=>a.studentId===stu.id),stu.id,questions);
+        const cnt=attempts.filter(a=>a.studentId===stu.id).length;
+        return(
+          <div key={stu.id} className="student-row" onClick={()=>setSel(stu)}>
+            <div className="flex-between">
+              <div className="fw6">{stu.name}</div>
+              <div className="flex gap4">{standards.map(s=><MasteryCell key={s.id} score={best[s.id]} size="mini"/>)}</div>
+            </div>
+            <div className="text-xs text-muted mt4">{cnt} attempt{cnt!==1?'s':''}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENT: ASSESSMENT TAKER
+// ═══════════════════════════════════════════════════════════
+function AssessmentTaker({assessment,questions,standards,videos,studentName,studentId,onSubmit,onCancel}){
+  const [phase,setPhase]=useState('prestart');
+  const [answers,setAnswers]=useState({});
+  const [curQ,setCurQ]=useState(0);
+  const [timeLeft,setTimeLeft]=useState(assessment.timeLimit*60);
+  const [expired,setExpired]=useState(false);
+  const [attempt,setAttempt]=useState(null);
+  const [expandedStd,setExpandedStd]=useState(null);
+  const timerRef=useRef(null);
+
+  const asmStds=standards.filter(s=>assessment.standards.includes(s.id));
+
+  useEffect(()=>{
+    if(phase==='taking'){timerRef.current=setInterval(()=>{setTimeLeft(t=>{if(t<=1){clearInterval(timerRef.current);setExpired(true);return 0;}return t-1;});},1000);}
+    return()=>clearInterval(timerRef.current);
+  },[phase]);
+  useEffect(()=>{if(expired&&phase==='taking')doSubmit(true);},[expired]);
+
+  function doSubmit(auto=false){
+    clearInterval(timerRef.current);
+    const att={id:'at'+Date.now(),studentId,studentName,assessmentId:assessment.id,answers:{...answers},submittedAt:new Date().toISOString(),timeExpired:auto};
+    setAttempt(att);onSubmit(att);setPhase('results');
+  }
+
+  function toggleMulti(qid,idx){
+    setAnswers(prev=>{const cur=Array.isArray(prev[qid])?[...prev[qid]]:[];const i=cur.indexOf(idx);if(i>=0)cur.splice(i,1);else cur.push(idx);return{...prev,[qid]:cur};});
+  }
+
+  function isAnswered(q){
+    if(!answers.hasOwnProperty(q.id))return false;
+    if(q.format==='multi')return Array.isArray(answers[q.id])&&answers[q.id].length>0;
+    return true;
+  }
+
+  const mins=Math.floor(timeLeft/60),secs=timeLeft%60;
+  const pct=timeLeft/(assessment.timeLimit*60);
+  const timerCls=pct>0.25?'timer-normal':pct>0.10?'timer-yellow':'timer-red';
+
+  if(phase==='prestart') return(
+    <div style={{maxWidth:540,margin:'0 auto'}}>
+      <div className="card" style={{padding:32}}>
+        <div className="fw7" style={{fontSize:22,marginBottom:6}}>{assessment.title}</div>
+        <div className="text-muted mb20">{assessment.desc}</div>
+        <div className="grid2 mb20" style={{gap:8}}>
+          {[['Questions',questions.length],['Time limit',assessment.timeLimit+' min']].map(([k,v])=>(
+            <div key={k} style={{background:'#f4f3ef',borderRadius:10,padding:'14px',textAlign:'center'}}>
+              <div className="text-xs text-muted" style={{textTransform:'uppercase',letterSpacing:'.5px'}}>{k}</div>
+              <div style={{fontSize:26,fontWeight:700,color:'#4F46E5',marginTop:2}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        {asmStds.length>0&&(
+          <div className="mb20">
+            <div className="fw6 text-sm mb8">Standards covered</div>
+            {asmStds.map(s=>(
+              <div key={s.id} style={{padding:'7px 0',borderBottom:'1px solid #f3f4f6',fontSize:14,display:'flex',alignItems:'center',gap:8}}>
+                <span className="std-badge">{s.code}</span>{s.title}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap8">
+          <button className="btn btn-primary" style={{flex:1,padding:12,fontSize:15,justifyContent:'center'}} onClick={()=>setPhase('taking')}>Begin assessment</button>
+          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if(phase==='taking'){
+    const q=questions[curQ];
+    const multiAns=Array.isArray(answers[q.id])?answers[q.id]:[];
+    return(
+      <div style={{maxWidth:680,margin:'0 auto'}}>
+        <div className="flex-between mb20" style={{gap:8}}>
+          <div className="fw6" style={{fontSize:15}}>{assessment.title}</div>
+          <div className={`timer-box ${timerCls}`}>{String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}</div>
+        </div>
+        <div className="q-strip">
+          {questions.map((_,i)=><button key={i} className={`q-num ${isAnswered(questions[i])?'answered':''} ${i===curQ?'current':''}`} onClick={()=>setCurQ(i)}>{i+1}</button>)}
+        </div>
+        <div className="card" style={{padding:28}}>
+          <div className="flex-between mb16">
+            <span className="text-sm text-muted">Question {curQ+1} of {questions.length}</span>
+            <div className="flex gap4">
+              {q.standards.map(sid=>{const s=asmStds.find(x=>x.id===sid);return s?<span key={sid} className="std-badge">{s.code}</span>:null;})}
+              <span className={`tag ${q.difficulty==='Basic'?'tag-green':q.difficulty==='Conceptual'?'tag-yellow':'tag-gray'}`}>{q.difficulty}</span>
+              {q.format==='multi'&&<span className="tag tag-purple">Select all that apply</span>}
+            </div>
+          </div>
+          <div style={{fontSize:17,fontWeight:500,marginBottom:q.image?12:22,lineHeight:1.6}}>{q.text}</div>
+          {q.image&&<img src={q.image} alt="Q" style={{maxWidth:'100%',maxHeight:220,borderRadius:8,border:'1px solid #e5e7eb',display:'block',marginBottom:20,objectFit:'contain'}}/>}
+          {q.format==='mc'&&q.choices.map((c,i)=>(
+            <button key={i} className={`opt-btn ${answers[q.id]===i?'selected':''}`} onClick={()=>setAnswers(a=>({...a,[q.id]:i}))}>
+              <span style={{width:22,height:22,borderRadius:'50%',border:`2px solid ${answers[q.id]===i?'#4F46E5':'#d1d5db'}`,background:answers[q.id]===i?'#4F46E5':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                {answers[q.id]===i&&<span style={{width:7,height:7,borderRadius:'50%',background:'#fff'}}/>}
+              </span>{c}
+            </button>
+          ))}
+          {q.format==='multi'&&q.choices.map((c,i)=>{const sel=multiAns.includes(i);return(
+            <button key={i} className={`opt-btn ${sel?'selected':''}`} onClick={()=>toggleMulti(q.id,i)} style={{borderColor:sel?'#7c3aed':'#e5e7eb',background:sel?'#faf5ff':'#fff'}}>
+              <span style={{width:22,height:22,borderRadius:4,border:`2px solid ${sel?'#7c3aed':'#d1d5db'}`,background:sel?'#7c3aed':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:12,color:'#fff',fontWeight:700}}>{sel?'✓':''}</span>{c}
+            </button>
+          );})}
+          {q.format==='numeric'&&<input className="input" type="number" style={{maxWidth:200,fontSize:16}} value={answers[q.id]||''} onChange={e=>setAnswers(a=>({...a,[q.id]:e.target.value}))} placeholder="Enter answer"/>}
+        </div>
+        <div className="flex-between mt16">
+          <button className="btn btn-secondary" disabled={curQ===0} onClick={()=>setCurQ(i=>i-1)}>← Previous</button>
+          {curQ<questions.length-1?<button className="btn btn-primary" onClick={()=>setCurQ(i=>i+1)}>Next →</button>:<button className="btn btn-primary" style={{background:'#16a34a',borderColor:'#16a34a'}} onClick={()=>doSubmit()}>Submit</button>}
+        </div>
+      </div>
+    );
+  }
+
+  // Results
+  if(!attempt) return null;
+  const {stdScores,overall}=scoreAttempt(attempt,questions);
+  const msgs={green:"You've mastered this — move on.",yellow:'Close — review before moving on.',red:'Revisit course materials for this objective.',untested:'No questions on this standard.'};
+
+  return(
+    <div style={{maxWidth:680,margin:'0 auto'}}>
+      {attempt.timeExpired&&<div className="info-box info-warn mb16">Time ran out — you may want to pace differently next time.</div>}
+      <div className="card mb24" style={{textAlign:'center',padding:'24px'}}>
+        <div className="text-xs text-muted" style={{textTransform:'uppercase',letterSpacing:'.5px',marginBottom:4}}>Overall score</div>
+        <div style={{fontSize:32,fontWeight:800,color:'#374151'}}>{overall.earned}/{overall.total}</div>
+        <div className="text-sm text-muted">{overall.total>0?Math.round(overall.earned/overall.total*100):0}% correct</div>
+        <button className="print-btn no-print mt12" onClick={()=>printAssessmentReport({student:{id:studentId,name:studentName},attempt,assessment,questions,standards})}>
+          🖨 Download / Print PDF
+        </button>
+      </div>
+      <div className="fw7 mb12" style={{fontSize:18}}>Mastery by standard</div>
+      {asmStds.map(s=>{
+        const score=stdScores[s.id];const level=masteryLevel(score);
+        const missed=questions.filter(q=>q.standards.includes(s.id)&&attempt.answers.hasOwnProperty(q.id)).filter(q=>!isCorrect(q,attempt.answers[q.id]));
+        const recVids=videos.filter(v=>v.standards.includes(s.id));
+        return(
+          <div key={s.id} className="results-row">
+            <div className="results-hdr" onClick={()=>setExpandedStd(expandedStd===s.id?null:s.id)}>
+              <div className="flex gap10"><span className="std-badge">{s.code}</span><span className="fw6" style={{fontSize:15}}>{s.title}</span></div>
+              <div className="flex gap10"><MasteryCell score={score}/><span className="text-muted" style={{fontSize:14}}>{expandedStd===s.id?'▲':'▼'}</span></div>
+            </div>
+            {expandedStd===s.id&&(
+              <div className="results-body">
+                <div className="text-sm mb12" style={{color:{green:'#166534',yellow:'#854d0e',red:'#991b1b',untested:'#6b7280'}[level]}}>{msgs[level]}</div>
+                {missed.length>0&&(
+                  <div className="mb12">
+                    <div className="fw6 text-sm mb8">Questions to review</div>
+                    {missed.map(q=>{
+                      const studentAns=attempt.answers[q.id];
+                      const wrongExp=q.wrongExplanations&&(q.format==='mc'?q.wrongExplanations[Number(studentAns)]:null);
+                      return(
+                        <div key={q.id} style={{background:'#fff',border:'1px solid #fecaca',borderRadius:8,padding:'12px',marginBottom:8}}>
+                          <div className="fw6 text-sm mb6">{q.text}</div>
+                          {q.image&&<img src={q.image} alt="" style={{maxHeight:70,borderRadius:6,marginBottom:8,border:'1px solid #e5e7eb'}}/>}
+                          {q.format==='mc'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {q.choices[q.correct]}</div>}
+                          {q.format==='multi'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {(q.correctMulti||[]).map(i=>q.choices[i]).join(', ')}</div>}
+                          {q.format==='numeric'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {q.correct}</div>}
+                          {q.explanation&&<div className="text-sm text-muted" style={{background:'#f4f3ef',borderRadius:6,padding:'7px',marginBottom:6}}><strong>Why correct:</strong> {q.explanation}</div>}
+                          {wrongExp&&<div className="text-sm" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Why your answer was wrong:</strong> {wrongExp}</div>}
+                          {q.format==='multi'&&Array.isArray(studentAns)&&studentAns.filter(i=>!(q.correctMulti||[]).includes(i)).map(i=>(q.wrongExplanations||{})[i]).filter(Boolean).map((exp,ei)=>(
+                            <div key={ei} className="text-sm mt4" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Wrong choice:</strong> {exp}</div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {recVids.length>0&&(
+                  <div>
+                    <div className="fw6 text-sm mb8">{level==='red'||level==='yellow'?'Recommended videos':'Additional resources'}</div>
+                    {recVids.map(v=>(
+                      <div key={v.id} className="video-card" style={{marginBottom:6}}>
+                        <div className="video-thumb">{v.thumb||'▶'}</div>
+                        <div style={{flex:1}}><div className="fw6 text-sm">{v.title}</div>{v.desc&&<div className="text-xs text-muted mt4">{v.desc}</div>}</div>
+                        <a href={v.url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm" style={{color:'#4F46E5',whiteSpace:'nowrap'}}>Watch →</a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {missed.length===0&&level!=='untested'&&recVids.length===0&&<div className="text-sm" style={{color:'#16a34a'}}>✓ No questions missed on this standard.</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button className="btn btn-primary mt16" style={{width:'100%',padding:12,justifyContent:'center',fontSize:15}} onClick={()=>{setAnswers({});setCurQ(0);setTimeLeft(assessment.timeLimit*60);setExpired(false);setPhase('prestart');}}>Retake assessment</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENT DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function StudentDashboard({attempts,standards,questions,studentId,studentName,courseName,units,videos,onTake}){
+  const myAttempts=attempts.filter(a=>a.studentId===studentId);
+  const best=bestMastery(myAttempts,studentId,questions);
+  const allAsms=units.flatMap(u=>u.assessments);
+  const needsReview=standards.filter(s=>{const l=masteryLevel(best[s.id]);return l==='red'||l==='yellow';});
+  const recVids=videos.filter(v=>v.standards.some(sid=>needsReview.some(s=>s.id===sid)));
+
+  return(
+    <div>
+      <div className="flex-between mb16">
+        <div><div className="section-title mb4">My progress</div><div className="section-sub" style={{marginBottom:0}}>Best mastery per standard across all attempts.</div></div>
+        <button className="print-btn no-print" onClick={()=>printStudentCourseReport({student:{id:studentId,name:studentName||'Student'},course:{name:courseName||'Course'},attempts,questions,standards,units})}>
+          🖨 Print my report
+        </button>
+      </div>
+      <div className="card mb16">
+        {standards.length===0&&<div className="text-muted text-sm" style={{padding:12}}>No standards defined.</div>}
+        {standards.map(s=>(
+          <div key={s.id} className="flex-between" style={{padding:'10px 0',borderBottom:'1px solid #f3f4f6'}}>
+            <div><span className="std-badge">{s.code}</span> <span className="fw6" style={{fontSize:14,marginLeft:4}}>{s.title}</span></div>
+            <MasteryCell score={best[s.id]}/>
+          </div>
+        ))}
+      </div>
+      {recVids.length>0&&(
+        <div className="card mb20" style={{border:'1px solid #fde68a',background:'#fffbeb'}}>
+          <div className="fw7 mb4" style={{fontSize:15,color:'#92400e'}}>📺 Recommended for you</div>
+          <div className="text-sm mb12" style={{color:'#92400e'}}>Based on standards that need review:</div>
+          {recVids.map(v=>(
+            <div key={v.id} className="video-card" style={{marginBottom:6,background:'#fff'}}>
+              <div className="video-thumb">{v.thumb||'▶'}</div>
+              <div style={{flex:1}}><div className="fw6 text-sm">{v.title}</div>{v.desc&&<div className="text-xs text-muted mt4">{v.desc}</div>}</div>
+              <a href={v.url} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm" style={{color:'#4F46E5'}}>Watch →</a>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex-between mb12">
+        <div className="fw6">Assessment history</div>
+        <button className="btn btn-primary btn-sm" onClick={onTake}>Take assessment</button>
+      </div>
+      {myAttempts.length===0&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:32}}>No attempts yet.</div>}
+      {myAttempts.map((att,i)=>{
+        const asm=allAsms.find(a=>a.id===att.assessmentId);
+        const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
+        const {overall}=scoreAttempt(att,qs);
+        return(
+          <div key={att.id} className="card mb8 flex-between">
+            <div><div className="fw6 text-sm">{asm?.title||'Assessment'}</div><div className="text-xs text-muted mt4">{new Date(att.submittedAt).toLocaleString()}{att.timeExpired?' — time expired':''}</div></div>
+            <span className="tag tag-blue">{overall.earned}/{overall.total} ({overall.total>0?Math.round(overall.earned/overall.total*100):0}%)</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENT ASSESSMENT PICKER (with gating)
+// ═══════════════════════════════════════════════════════════
+function AssessmentPicker({units,questions,standards,videos,studentName,studentId,attempts,onSubmit,onBack}){
+  const [picked,setPicked]=useState(null);
+
+  function isUnlocked(asm){
+    if(!asm.prerequisiteId) return true;
+    const pct=bestOverallPct(attempts,studentId,asm.prerequisiteId,questions);
+    return pct!==null&&pct>=(asm.prerequisiteGrade||0);
+  }
+
+  if(picked){
+    let qs=questions.filter(q=>picked.questionIds.includes(q.id));
+    if(picked.randomize) qs=[...qs].sort(()=>Math.random()-.5);
+    return <AssessmentTaker assessment={picked} questions={qs} standards={standards} videos={videos} studentName={studentName} studentId={studentId} onSubmit={att=>{onSubmit(att);setPicked(null);}} onCancel={()=>setPicked(null)}/>;
+  }
+
+  return(
+    <div>
+      <div className="section-title mb4">Take an assessment</div>
+      <div className="section-sub">Choose a published assessment below.</div>
+      {!units.some(u=>u.assessments.some(a=>a.published))&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:32}}>No published assessments yet.</div>}
+      {units.map(unit=>{
+        const pub=unit.assessments.filter(a=>a.published);
+        if(!pub.length) return null;
+        return(
+          <div key={unit.id} style={{marginBottom:20}}>
+            <div className="fw7 text-sm text-muted mb8" style={{textTransform:'uppercase',letterSpacing:'.5px'}}>{unit.name}</div>
+            {pub.map(asm=>{
+              const unlocked=isUnlocked(asm);
+              const cnt=attempts.filter(a=>a.assessmentId===asm.id&&a.studentId===studentId).length;
+              const prereq=asm.prerequisiteId?units.flatMap(u=>u.assessments).find(a=>a.id===asm.prerequisiteId):null;
+              return(
+                <div key={asm.id} className="asm-card" style={{cursor:unlocked?'pointer':'default',opacity:unlocked?1:0.6,background:unlocked?'#fff':'#f9fafb'}} onClick={()=>{if(unlocked)setPicked(asm);}}>
+                  <div style={{flex:1}}>
+                    <div className="fw6" style={{fontSize:15,display:'flex',alignItems:'center',gap:8}}>{!unlocked&&<span>🔒</span>}{asm.title}</div>
+                    <div className="flex gap6 mt6 flex-wrap">
+                      <span className="tag tag-gray">⏱ {asm.timeLimit} min</span>
+                      <span className="tag tag-gray">{asm.questionIds.length} questions</span>
+                      {cnt>0&&<span className="tag tag-blue">Attempted {cnt}×</span>}
+                      {!unlocked&&prereq&&<span className="tag tag-yellow">Requires {Math.round(asm.prerequisiteGrade||0)}% on "{prereq.title}"</span>}
+                    </div>
+                  </div>
+                  {unlocked?<button className="btn btn-primary btn-sm">Start →</button>:<span className="text-sm text-muted">Locked</span>}
+                </div>
+              );
+            })}
+          </div>
+        );
+      }).filter(Boolean)}
+      <button className="btn btn-ghost mt8" onClick={onBack}>← Back to my progress</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENT ROSTER MANAGER (Instructor tab)
+// ═══════════════════════════════════════════════════════════
+function RosterManager({course,updateCourse}){
+  const [email,setEmail]=useState('');
+  const [name,setName]=useState('');
+  const [msg,setMsg]=useState('');
+  const [msgType,setMsgType]=useState('success');
+  const roster=course.roster||[];
+
+  function flash(text,type='success'){setMsg(text);setMsgType(type);setTimeout(()=>setMsg(''),3500);}
+
+  function addStudent(){
+    const e=email.trim().toLowerCase();
+    const n=name.trim();
+    if(!e||!n){flash('Both name and email are required.','error');return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)){flash('Please enter a valid email address.','error');return;}
+    if(roster.find(s=>s.email===e)){flash('A student with this email is already enrolled.','error');return;}
+    const newRoster=[...roster,{id:'stu_'+Date.now(),name:n,email:e}];
+    updateCourse({roster:newRoster});
+    setEmail('');setName('');
+    flash(`${n} added to the course.`);
+  }
+
+  function removeStudent(id){
+    updateCourse({roster:roster.filter(s=>s.id!==id)});
+  }
+
+  return(
+    <div>
+      <div className="section-title mb4">Student roster</div>
+      <div className="section-sub">Students can only access this course if their email is on this list.</div>
+      {msg&&<div className={`info-box ${msgType==='error'?'info-error':'info-success'} mb16`}>{msg}</div>}
+      {roster.length===0&&<div className="card mb16" style={{textAlign:'center',color:'#9ca3af',padding:32}}>No students enrolled yet. Add students below.</div>}
+      {roster.map(s=>(
+        <div key={s.id} style={{border:'1px solid #e5e7eb',borderRadius:10,padding:'11px 16px',marginBottom:8,background:'#fff',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+          <div>
+            <div className="fw6" style={{fontSize:14}}>{s.name}</div>
+            <div className="text-xs text-muted">{s.email}</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>removeStudent(s.id)}>Remove</button>
+        </div>
+      ))}
+      <div className="card mt16">
+        <div className="fw6 mb12">Add a student</div>
+        <div className="grid2" style={{gap:8,marginBottom:8}}>
+          <div><label>Full name</label><input className="input mt4" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addStudent()} placeholder="Jane Smith"/></div>
+          <div><label>Email address</label><input className="input mt4" type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addStudent()} placeholder="jane@school.edu"/></div>
+        </div>
+        <button className="btn btn-primary" onClick={addStudent}>Add student</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENT EMAIL LOGIN GATE
+// ═══════════════════════════════════════════════════════════
+function StudentGate({course,onEnter,onBack}){
+  const [email,setEmail]=useState('');
+  const [err,setErr]=useState('');
+  const roster=course.roster||[];
+
+  function handleSubmit(){
+    setErr('');
+    const e=email.trim().toLowerCase();
+    if(!e){setErr('Please enter your email address.');return;}
+    const match=roster.find(s=>s.email===e);
+    if(!match){setErr('This email is not enrolled in this course. Please contact your instructor.');return;}
+    // Matched — sign them in using their roster record
+    onEnter({id:match.id,name:match.name,email:match.email});
+  }
+
+  return(
+    <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{width:'100%',maxWidth:420}}>
+        <button className="btn btn-ghost mb16" style={{padding:'6px 0'}} onClick={onBack}>← Back to courses</button>
+        <div className="card" style={{padding:32}}>
+          <div className="fw7" style={{fontSize:20,marginBottom:4}}>{course.name}</div>
+          <div className="text-sm text-muted mb24">Enter your email address to access this course. You must be enrolled by your instructor first.</div>
+          {err&&<div className="info-box info-error mb12">{err}</div>}
+          {roster.length===0?(
+            <div className="info-box info-warn">No students have been enrolled in this course yet. Ask your instructor to add you.</div>
+          ):(
+            <>
+              <label>Your email address</label>
+              <input className="input mt4 mb20" type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSubmit()} placeholder="you@school.edu" autoFocus/>
+              <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:12,fontSize:15}} onClick={handleSubmit}>Sign in to course</button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// INSTRUCTOR ACCOUNTS (stored in app state)
+// ═══════════════════════════════════════════════════════════
+const INIT_INSTRUCTOR_ACCOUNTS=[
+  {id:'inst_default',name:'Instructor',password:INSTRUCTOR_PASSWORD},
+];
+
+// ═══════════════════════════════════════════════════════════
+// INSTRUCTOR PASSWORD GATE
+// ═══════════════════════════════════════════════════════════
+function InstructorGate({onUnlock,onCancel,accounts,setAccounts}){
+  const [view,setView]=useState('login'); // login | register
+  const [name,setName]=useState('');
+  const [pass,setPass]=useState('');
+  const [newName,setNewName]=useState('');
+  const [newPass,setNewPass]=useState('');
+  const [confirmPass,setConfirmPass]=useState('');
+  const [err,setErr]=useState('');
+  const [success,setSuccess]=useState('');
+
+  function attemptLogin(){
+    setErr('');
+    if(!pass){setErr('Please enter your password.');return;}
+    const match=accounts.find(a=>a.password===pass);
+    if(match){onUnlock(match);}
+    else{setErr('Incorrect password. Try again or create a new account.');setPass('');}
+  }
+
+  function createAccount(){
+    setErr('');
+    if(!newName.trim()){setErr('Please enter your name.');return;}
+    if(!newPass){setErr('Please enter a password.');return;}
+    if(newPass.length<4){setErr('Password must be at least 4 characters.');return;}
+    if(newPass!==confirmPass){setErr('Passwords do not match.');return;}
+    if(accounts.find(a=>a.password===newPass)){setErr('That password is already in use. Choose a different one.');return;}
+    const newAcct={id:'inst_'+Date.now(),name:newName.trim(),password:newPass};
+    setAccounts(prev=>[...prev,newAcct]);
+    setSuccess('Account created! You can now sign in with your password.');
+    setView('login');
+    setNewName('');setNewPass('');setConfirmPass('');
+  }
+
+  if(view==='register') return(
+    <div style={{minHeight:'70vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{width:'100%',maxWidth:400}}>
+        <div className="card" style={{padding:32}}>
+          <div style={{fontSize:28,textAlign:'center',marginBottom:12}}>🔐</div>
+          <div className="fw7" style={{fontSize:18,marginBottom:4,textAlign:'center'}}>Create instructor account</div>
+          <div className="text-sm text-muted mb20" style={{textAlign:'center'}}>Set up your personal instructor login.</div>
+          {err&&<div className="info-box info-error mb12">{err}</div>}
+          <label>Your name</label>
+          <input className="input mt4 mb12" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="e.g. Dr. Smith"/>
+          <label>Choose a password</label>
+          <input className="input mt4 mb8" type="password" value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="At least 4 characters"/>
+          <label>Confirm password</label>
+          <input className="input mt4 mb20" type="password" value={confirmPass} onChange={e=>setConfirmPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createAccount()} placeholder="Re-enter password"/>
+          <button className="btn btn-primary mb8" style={{width:'100%',justifyContent:'center'}} onClick={createAccount}>Create account</button>
+          <button className="btn btn-ghost btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={()=>{setView('login');setErr('');}}>← Back to sign in</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{minHeight:'70vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{width:'100%',maxWidth:400}}>
+        <div className="card" style={{padding:32}}>
+          <div style={{fontSize:28,textAlign:'center',marginBottom:12}}>🔐</div>
+          <div className="fw7" style={{fontSize:18,marginBottom:4,textAlign:'center'}}>Instructor sign in</div>
+          <div className="text-sm text-muted mb20" style={{textAlign:'center'}}>Enter your instructor password to access course management.</div>
+          {err&&<div className="info-box info-error mb12">{err}</div>}
+          {success&&<div className="info-box info-success mb12">{success}</div>}
+          <label>Password</label>
+          <input className="input mt4 mb16" type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&attemptLogin()} placeholder="Your instructor password" autoFocus/>
+          <button className="btn btn-primary mb8" style={{width:'100%',justifyContent:'center'}} onClick={attemptLogin}>Sign in</button>
+          <button className="btn btn-secondary mb8" style={{width:'100%',justifyContent:'center'}} onClick={()=>{setView('register');setErr('');setSuccess('');}}>Create new instructor account</button>
+          {onCancel&&<button className="btn btn-ghost btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={onCancel}>← Back to student login</button>}
+        </div>
+        <div className="text-xs text-muted mt12" style={{textAlign:'center'}}>
+          {accounts.length} instructor account{accounts.length!==1?'s':''} registered
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// COURSE MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function CourseList({courses,onSelect,onNew,onCopy}){
+  const [confirmDelete,setConfirmDelete]=useState(null);
+  return(
+    <div className="page">
+      <div className="flex-between mb24">
+        <div><div className="section-title">My courses</div><div className="section-sub" style={{marginBottom:0}}>Select a course to manage it.</div></div>
+        <button className="btn btn-primary" onClick={onNew}>+ New course</button>
+      </div>
+      {courses.length===0&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:48}}>No courses yet. Click "+ New course" to get started.</div>}
+      <div className="grid2" style={{gap:16}}>
+        {courses.map(c=>(
+          <div key={c.id} className="course-card" style={{position:'relative',cursor:'default'}}>
+            {/* Clickable main area */}
+            <div onClick={()=>onSelect(c)} style={{cursor:'pointer'}}>
+              <div className="fw7" style={{fontSize:17,marginBottom:4}}>{c.name}</div>
+              {c.description&&<div className="text-sm text-muted mb12">{c.description}</div>}
+              <div className="flex gap8 flex-wrap mb16">
+                <span className="tag tag-gray">{c.units.reduce((n,u)=>n+u.assessments.length,0)} assessment{c.units.reduce((n,u)=>n+u.assessments.length,0)!==1?'s':''}</span>
+                <span className="tag tag-gray">{[...new Set(c.attempts.map(a=>a.studentId))].length} student{[...new Set(c.attempts.map(a=>a.studentId))].length!==1?'s':''}</span>
+                <span className="tag tag-blue">{c.units.length} unit{c.units.length!==1?'s':''}</span>
+              </div>
+            </div>
+            {/* Action buttons */}
+            <div style={{borderTop:'1px solid #f3f4f6',paddingTop:12,display:'flex',gap:8}}>
+              <button className="btn btn-primary btn-sm" style={{flex:1,justifyContent:'center'}} onClick={()=>onSelect(c)}>Open →</button>
+              <button className="btn btn-secondary btn-sm" style={{flex:1,justifyContent:'center'}} onClick={e=>{e.stopPropagation();onCopy(c);}}>⧉ Copy course</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NewCourseForm({onCreate,onCancel,instructorId}){
+  const [name,setName]=useState('');
+  const [desc,setDesc]=useState('');
+  const [pass,setPass]=useState('');
+  const [err,setErr]=useState('');
+  function submit(){
+    if(!name.trim()){setErr('Course name is required.');return;}
+    if(!pass.trim()){setErr('Student password is required.');return;}
+    onCreate({id:'c'+Date.now(),instructorId:instructorId||'inst_default',name:name.trim(),description:desc.trim(),studentPassword:pass.trim(),roster:[],standards:[],units:[],questions:[],videos:[],attempts:[]});
+  }
+  return(
+    <div className="page" style={{maxWidth:520}}>
+      <button className="btn btn-ghost mb16" onClick={onCancel}>← Back</button>
+      <div className="section-title mb4">New course</div>
+      <div className="section-sub">Set up a new course with its own standards, assessments, and students.</div>
+      <div className="card">
+        {err&&<div className="info-box info-error mb12">{err}</div>}
+        <label>Course name</label><input className="input mt4 mb12" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Human Physiology I"/>
+        <label>Description</label><textarea className="input mt4 mb12" rows={3} value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Brief course description…"/>
+        <label>Student password</label>
+        <input className="input mt4 mb4" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Students will enter this to access the course"/>
+        <div className="text-xs text-muted mb20">Share this password with enrolled students.</div>
+        <div className="flex gap8"><button className="btn btn-primary" onClick={submit}>Create course</button><button className="btn btn-secondary" onClick={onCancel}>Cancel</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// COPY COURSE FORM
+// ═══════════════════════════════════════════════════════════
+function CopyCourseForm({sourceCourse,onCreate,onCancel,instructorId}){
+  const [name,setName]=useState(sourceCourse.name+' — Copy');
+  const [desc,setDesc]=useState(sourceCourse.description||'');
+  const [pass,setPass]=useState('');
+  const [err,setErr]=useState('');
+
+  function submit(){
+    if(!name.trim()){setErr('Course name is required.');return;}
+    if(!pass.trim()){setErr('Student password is required.');return;}
+    // Deep-copy course content but wipe attempts and regenerate IDs for units/assessments
+    const newId='c'+Date.now();
+    const idMap={};
+    const newUnits=(sourceCourse.units||[]).map(u=>{
+      const newUid='u'+Date.now()+Math.random().toString(36).slice(2);
+      const newAsms=u.assessments.map(a=>{
+        const newAid='a'+Date.now()+Math.random().toString(36).slice(2);
+        idMap[a.id]=newAid;
+        return{...a,id:newAid,prerequisiteId:null}; // remap prerequisites after
+      });
+      return{...u,id:newUid,assessments:newAsms};
+    });
+    // Remap prerequisiteIds using the id map
+    const remappedUnits=newUnits.map(u=>({...u,assessments:u.assessments.map(a=>({...a,prerequisiteId:a.prerequisiteId?idMap[a.prerequisiteId]||null:null}))}));
+    // Copy questions with fresh IDs
+    const qIdMap={};
+    const newQuestions=(sourceCourse.questions||[]).map(q=>{
+      const newQid='q'+Date.now()+Math.random().toString(36).slice(2);
+      qIdMap[q.id]=newQid;
+      return{...q,id:newQid};
+    });
+    // Remap questionIds in assessments
+    const finalUnits=remappedUnits.map(u=>({...u,assessments:u.assessments.map(a=>({...a,questionIds:(a.questionIds||[]).map(qid=>qIdMap[qid]||qid)}))}));
+    onCreate({
+      id:newId,
+      instructorId:instructorId||sourceCourse.instructorId||'inst_default',
+      name:name.trim(),
+      description:desc.trim(),
+      studentPassword:pass.trim(),
+      roster:[],
+      standards:JSON.parse(JSON.stringify(sourceCourse.standards||[])),
+      units:finalUnits,
+      questions:newQuestions,
+      videos:JSON.parse(JSON.stringify(sourceCourse.videos||[])),
+      attempts:[],
+    });
+  }
+
+  return(
+    <div className="page" style={{maxWidth:540}}>
+      <button className="btn btn-ghost mb16" onClick={onCancel}>← Back</button>
+      <div className="section-title mb4">Copy course</div>
+      <div className="section-sub">Creates a new section with the same standards, units, assessments, and questions — but no student data.</div>
+      <div className="info-box info-info mb16">
+        <strong>Copying from:</strong> {sourceCourse.name}<br/>
+        <span className="text-sm">Includes: {(sourceCourse.standards||[]).length} standards · {(sourceCourse.units||[]).flatMap(u=>u.assessments).length} assessments · {(sourceCourse.questions||[]).length} questions · {(sourceCourse.videos||[]).length} videos</span>
+      </div>
+      <div className="card">
+        {err&&<div className="info-box info-error mb12">{err}</div>}
+        <label>New section name</label>
+        <input className="input mt4 mb12" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Human Physiology I — Section 2"/>
+        <label>Description</label>
+        <textarea className="input mt4 mb12" rows={2} value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Brief description…"/>
+        <label>Student password for this section</label>
+        <input className="input mt4 mb4" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Choose a password for this section's students"/>
+        <div className="text-xs text-muted mb20">Each section has its own password so students only access their section.</div>
+        <div className="flex gap8">
+          <button className="btn btn-primary" onClick={submit}>Create copy</button>
+          <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// STUDENT EMAIL ENTRY (finds courses by email)
+// ═══════════════════════════════════════════════════════════
+function StudentEmailEntry({courses,onEnter}){
+  const [email,setEmail]=useState('');
+  const [err,setErr]=useState('');
+
+  function handleSubmit(){
+    setErr('');
+    const e=email.trim().toLowerCase();
+    if(!e){setErr('Please enter your email address.');return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)){setErr('Please enter a valid email address.');return;}
+    // Find all courses this email is enrolled in
+    const enrolled=courses.filter(c=>(c.roster||[]).some(s=>s.email===e));
+    if(enrolled.length===0){setErr('No courses found for this email. Please contact your instructor to be added.');return;}
+    // Get student record from any of the enrolled courses
+    const rosterEntry=enrolled[0].roster.find(s=>s.email===e);
+    // If enrolled in exactly one course, jump straight in
+    if(enrolled.length===1){
+      onEnter({id:rosterEntry.id,name:rosterEntry.name,email:e},enrolled[0]);
+    } else {
+      // Multiple courses — let App handle course picker
+      onEnter({id:rosterEntry.id,name:rosterEntry.name,email:e},null);
+    }
+  }
+
+  return(
+    <div className="card" style={{padding:36}}>
+      <div style={{textAlign:'center',marginBottom:24}}>
+        <div className="nav-logo" style={{fontSize:22,display:'inline-block',marginBottom:8}}>Mastery<span style={{color:'#4F46E5'}}>Track</span></div>
+        <div className="fw7" style={{fontSize:18,marginBottom:4}}>Student sign in</div>
+        <div className="text-sm text-muted">Enter your email to access your courses.</div>
+      </div>
+      {err&&<div className="info-box info-error mb12">{err}</div>}
+      <label>Email address</label>
+      <input className="input mt4 mb20" type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSubmit()} placeholder="you@school.edu" autoFocus/>
+      <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:12,fontSize:15}} onClick={handleSubmit}>Continue</button>
+      <div className="text-xs text-muted mt12" style={{textAlign:'center'}}>You must be added by your instructor before you can sign in.</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// API HELPER
+// ═══════════════════════════════════════════════════════════
+const API = '/api/data';
+async function api(action, body={}) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({action, ...body})
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'API error');
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════════
+// APP ROOT
+// ═══════════════════════════════════════════════════════════
+function App(){
+  const [mode,setMode]=useState('student');
+  const [instUnlocked,setInstUnlocked]=useState(false);
+  const [currentInstructor,setCurrentInstructor]=useState(null);
+  const [instructorAccounts,setInstructorAccounts]=useState([]);
+  const [courses,setCourses]=useState([]);
+  const [selectedCourse,setSelectedCourse]=useState(null);
+  const [instScreen,setInstScreen]=useState('list');
+  const [copySource,setCopySource]=useState(null);
+  const [instTab,setInstTab]=useState('dashboard');
+  const [student,setStudent]=useState(null);
+  const [stuTab,setStuTab]=useState('dashboard');
+  const [selectedStudentCourse,setSelectedStudentCourse]=useState(null);
+  const [dbLoading,setDbLoading]=useState(true);
+  const [dbError,setDbError]=useState('');
+  const [saving,setSaving]=useState(false);
+  const [fontSize,setFontSize]=useState('md');
+  const fontSizeMap={sm:'13px',md:'15px',lg:'19px'};
+
+  useEffect(()=>{ document.documentElement.style.setProperty('--fs', fontSizeMap[fontSize]||'15px'); },[fontSize]);
+
+  // ── Load data from Neon on mount ──────────────────────────────────────────
+  useEffect(()=>{
+    async function load(){
+      setDbLoading(true);
+      try {
+        const [cRes, iRes] = await Promise.all([
+          api('getCourses'),
+          api('getInstructors')
+        ]);
+        // Load attempts for each course
+        const coursesWithAttempts = await Promise.all(
+          cRes.courses.map(async course => {
+            const aRes = await api('getAttempts', {courseId: course.id});
+            return {...course, attempts: aRes.attempts};
+          })
+        );
+        // If no courses, seed with example course
+        if(coursesWithAttempts.length === 0){
+          const seed = {...SEED_COURSE};
+          await api('saveCourse', {course: seed});
+          for(const att of SEED_ATTEMPTS){
+            await api('saveAttempt', {attempt: att, courseId: seed.id});
+          }
+          seed.attempts = SEED_ATTEMPTS;
+          setCourses([seed]);
+        } else {
+          setCourses(coursesWithAttempts);
+        }
+        setInstructorAccounts(iRes.accounts);
+      } catch(e) {
+        console.error(e);
+        setDbError(e.message);
+      }
+      setDbLoading(false);
+    }
+    load();
+  },[]);
+
+  // ── Live course ───────────────────────────────────────────────────────────
+  const myCourses = currentInstructor
+    ? courses.filter(c=>c.instructorId===currentInstructor.id)
+    : [];
+  const course = myCourses.find(c=>c.id===selectedCourse?.id)||selectedCourse;
+
+  // ── Update course — saves to Neon ─────────────────────────────────────────
+  async function updateCourse(patch){
+    const updated = {...course, ...patch};
+    setCourses(prev=>prev.map(c=>c.id===updated.id?updated:c));
+    setSelectedCourse(prev=>prev?{...prev,...patch}:prev);
+    setSaving(true);
+    try { await api('saveCourse', {course: updated}); }
+    catch(e){ console.error('Save failed:',e); }
+    setSaving(false);
+  }
+
+  const setStandards=v=>updateCourse({standards:typeof v==='function'?v(course.standards):v});
+  const setUnits=v=>updateCourse({units:typeof v==='function'?v(course.units):v});
+  const setQuestions=v=>updateCourse({questions:typeof v==='function'?v(course.questions):v});
+  const setVideos=v=>updateCourse({videos:typeof v==='function'?v(course.videos):v});
+
+  async function addAttempt(att, courseId){
+    const cid = courseId || selectedStudentCourse?.id;
+    try { await api('saveAttempt', {attempt: att, courseId: cid}); }
+    catch(e){ console.error('Attempt save failed:',e); }
+    setCourses(prev=>prev.map(c=>{
+      const ids=(c.units||[]).flatMap(u=>u.assessments.map(a=>a.id));
+      if(!ids.includes(att.assessmentId)) return c;
+      return{...c,attempts:[...(c.attempts||[]),att]};
+    }));
+  }
+
+  function goToInstructor(){setMode('instructor');setInstUnlocked(false);setCurrentInstructor(null);setSelectedCourse(null);setInstScreen('list');setInstTab('dashboard');setCopySource(null);}
+  function goToStudent(){setMode('student');setInstUnlocked(false);setCurrentInstructor(null);setStudent(null);setSelectedStudentCourse(null);setStuTab('dashboard');}
+
+  const INST_TABS=['dashboard','students','standards','assessments','videos'];
+  const INST_LABELS={dashboard:'Dashboard',students:'Students',standards:'Standards',assessments:'Assessments',videos:'Videos'};
+
+  // ── Font size control ─────────────────────────────────────────────────────
+  const FontSizeControl=()=>(
+    <div style={{display:'flex',alignItems:'center',gap:6}}>
+      <span style={{fontSize:'11px',color:'rgba(255,255,255,.5)',fontWeight:500,marginRight:2}}>Text</span>
+      {[['sm','12px'],['md','15px'],['lg','19px']].map(([k,sz])=>(
+        <button key={k} className={`fs-btn ${fontSize===k?'fs-active':''}`} style={{fontSize:sz}} onClick={()=>setFontSize(k)} title={k==='sm'?'Small':k==='md'?'Default':'Large'}>A</button>
+      ))}
+    </div>
+  );
+
+  // ── Student Nav ───────────────────────────────────────────────────────────
+  const StudentNav=()=>(
+    <nav className="nav">
+      <span className="nav-logo">Mastery<span>Track</span></span>
+      {selectedStudentCourse&&<span style={{fontSize:'.85em',color:'rgba(255,255,255,.6)',fontWeight:500}}>{selectedStudentCourse.name}</span>}
+      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:12}}>
+        <FontSizeControl/>
+        {student&&<><span style={{fontSize:'.85em',color:'rgba(255,255,255,.75)'}}>Hi, <strong>{student.name}</strong></span><button className="nav-btn" onClick={goToStudent}>Sign out</button></>}
+      </div>
+    </nav>
+  );
+
+  // ── Instructor Nav ────────────────────────────────────────────────────────
+  const InstructorNav=()=>(
+    <nav className="nav">
+      <span className="nav-logo">Mastery<span>Track</span></span>
+      {course&&instScreen==='course'&&<><button className="nav-btn" onClick={()=>{setInstScreen('list');setSelectedCourse(null);setInstTab('dashboard');}}>← Courses</button><span style={{fontSize:'.85em',color:'rgba(255,255,255,.65)',fontWeight:500}}>{course.name}</span></>}
+      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:12}}>
+        <FontSizeControl/>
+        {saving&&<span style={{fontSize:'.8em',color:'rgba(255,255,255,.5)'}}>💾 Saving…</span>}
+        {instUnlocked&&<><span className="nav-badge">📋 {currentInstructor?.name||'Instructor'}</span><button className="nav-btn" onClick={goToStudent}>Exit to student view</button></>}
+      </div>
+    </nav>
+  );
+
+  // ── Loading / Error ───────────────────────────────────────────────────────
+  if(dbLoading) return(
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'var(--bg)',gap:16}}>
+      <span className="nav-logo" style={{fontSize:24}}>Mastery<span style={{color:'#7dd3fc'}}>Track</span></span>
+      <Spinner/>
+      <div className="text-muted text-sm">Connecting to database…</div>
+    </div>
+  );
+
+  if(dbError) return(
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:24}}>
+      <div className="card" style={{maxWidth:460,textAlign:'center',padding:32}}>
+        <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+        <div className="fw7" style={{fontSize:18,marginBottom:8}}>Could not connect to database</div>
+        <div className="text-muted text-sm mb16">{dbError}</div>
+        <div className="text-sm text-muted">Make sure your DATABASE_URL environment variable is set correctly in Vercel.</div>
+        <button className="btn btn-primary mt16" onClick={()=>window.location.reload()}>Retry</button>
+      </div>
+    </div>
+  );
+
+  // ── INSTRUCTOR MODE ───────────────────────────────────────────────────────
+  if(mode==='instructor'){
+    if(!instUnlocked) return(
+      <><InstructorNav/>
+      <InstructorGate
+        onUnlock={acct=>{setInstUnlocked(true);setCurrentInstructor(acct);}}
+        onCancel={goToStudent}
+        accounts={instructorAccounts}
+        setAccounts={async (updater)=>{
+          const newAccounts=typeof updater==='function'?updater(instructorAccounts):updater;
+          setInstructorAccounts(newAccounts);
+          // New account is the last one added — save it
+          const newest=newAccounts[newAccounts.length-1];
+          if(newest&&!instructorAccounts.find(a=>a.id===newest.id)){
+            try{ await api('createInstructor',{id:newest.id,name:newest.name,password:newest.password}); }
+            catch(e){ console.error(e); }
+          }
+        }}
+      /></>
+    );
+    if(instScreen==='new') return(<><InstructorNav/><NewCourseForm instructorId={currentInstructor?.id} onCreate={async c=>{setCourses(prev=>[...prev,{...c,attempts:[]}]);await api('saveCourse',{course:c});setInstScreen('list');}} onCancel={()=>setInstScreen('list')}/></>);
+    if(instScreen==='list') return(<><InstructorNav/><CourseList courses={myCourses} onSelect={c=>{setSelectedCourse(c);setInstScreen('course');setInstTab('dashboard');}} onNew={()=>setInstScreen('new')} onCopy={c=>{setCopySource(c);setInstScreen('copy');}}/></>);
+    if(instScreen==='copy'&&copySource) return(<><InstructorNav/><CopyCourseForm instructorId={currentInstructor?.id} sourceCourse={copySource} onCreate={async newC=>{setCourses(prev=>[...prev,{...newC,attempts:[]}]);await api('saveCourse',{course:newC});setCopySource(null);setInstScreen('list');}} onCancel={()=>{setCopySource(null);setInstScreen('list');}}/></>);
+    if(instScreen==='course'&&course) return(
+      <><InstructorNav/>
+      <div className="page">
+        <div className="tabs">{INST_TABS.map(t=><button key={t} className={`tab ${instTab===t?'active':''}`} onClick={()=>setInstTab(t)}>{INST_LABELS[t]}</button>)}</div>
+        {instTab==='dashboard'&&<InstructorDashboard attempts={course.attempts||[]} standards={course.standards||[]} questions={course.questions||[]} courseName={course.name} units={course.units||[]}/>}
+        {instTab==='students'&&<RosterManager course={course} updateCourse={updateCourse}/>}
+        {instTab==='standards'&&<StandardsManager standards={course.standards||[]} setStandards={setStandards}/>}
+        {instTab==='assessments'&&<UnitsManager standards={course.standards||[]} units={course.units||[]} questions={course.questions||[]} setUnits={setUnits} setQuestions={setQuestions}/>}
+        {instTab==='videos'&&<VideoLibrary standards={course.standards||[]} videos={course.videos||[]} setVideos={setVideos}/>}
+      </div></>
+    );
+  }
+
+  // ── STUDENT MODE ──────────────────────────────────────────────────────────
+  if(!student) return(
+    <><StudentNav/>
+    <div style={{minHeight:'80vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{width:'100%',maxWidth:420}}>
+        <StudentEmailEntry courses={courses} onEnter={(stu,course)=>{setStudent(stu);setSelectedStudentCourse(course);setStuTab('dashboard');}}/>
+      </div>
+      <div style={{marginTop:20,width:'100%',maxWidth:420}}>
+        <button onClick={goToInstructor} style={{width:'100%',padding:'11px',borderRadius:10,border:'1.5px solid #4361EE',background:'#fff',color:'#4361EE',fontSize:'var(--fs)',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontFamily:'inherit'}}
+          onMouseEnter={e=>e.currentTarget.style.background='#f0f4ff'}
+          onMouseLeave={e=>e.currentTarget.style.background='#fff'}>
+          🔐 Instructor login
+        </button>
+      </div>
+    </div></>
+  );
+
+  if(!selectedStudentCourse){
+    const myCrs=courses.filter(c=>(c.roster||[]).some(s=>s.email===student.email));
+    if(myCrs.length===1){setSelectedStudentCourse(myCrs[0]);return null;}
+    return(
+      <><StudentNav/>
+      <div className="page">
+        <div className="section-title mb4">Your courses</div>
+        <div className="section-sub">Select a course to continue.</div>
+        <div className="grid2" style={{gap:16}}>
+          {myCrs.map(c=><div key={c.id} className="course-card" onClick={()=>setSelectedStudentCourse(c)}><div className="fw7" style={{fontSize:'1.05em',marginBottom:4}}>{c.name}</div>{c.description&&<div className="text-sm text-muted">{c.description}</div>}</div>)}
+        </div>
+      </div></>
+    );
+  }
+
+  const liveCourse=courses.find(c=>c.id===selectedStudentCourse.id)||selectedStudentCourse;
+  return(
+    <><StudentNav/>
+    <div className="page">
+      <div className="tabs">
+        <button className={`tab ${stuTab==='dashboard'?'active':''}`} onClick={()=>setStuTab('dashboard')}>My progress</button>
+        <button className={`tab ${stuTab==='take'?'active':''}`} onClick={()=>setStuTab('take')}>Take assessment</button>
+      </div>
+      {stuTab==='dashboard'&&<StudentDashboard attempts={liveCourse.attempts||[]} standards={liveCourse.standards||[]} questions={liveCourse.questions||[]} studentId={student.id} studentName={student.name} courseName={liveCourse.name} units={liveCourse.units||[]} videos={liveCourse.videos||[]} onTake={()=>setStuTab('take')}/>}
+      {stuTab==='take'&&<AssessmentPicker units={liveCourse.units||[]} questions={liveCourse.questions||[]} standards={liveCourse.standards||[]} videos={liveCourse.videos||[]} studentName={student.name} studentId={student.id} attempts={liveCourse.attempts||[]} onSubmit={att=>{addAttempt(att,liveCourse.id);setStuTab('dashboard');}} onBack={()=>setStuTab('dashboard')}/>}
+    </div></>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
