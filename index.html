@@ -1911,18 +1911,15 @@ function AttemptReview({attempt,questions,assessment,standards,onBack}){
             {q.format!=='numeric'&&q.choices.map((ch,ci)=>{
               const isCor=q.format==='mc'?ci===q.correct:(q.correctMulti||[]).includes(ci);
               const isAns=q.format==='mc'?Number(ans)===ci:(Array.isArray(ans)&&ans.map(Number).includes(ci));
-              if(!isCor&&!isAns) return null;
-              return(
-                <div key={ci} style={{padding:'6px 10px',borderRadius:8,marginBottom:4,fontSize:14,
-                  background:isCor?'#dcfce7':isAns&&!isCor?'#fee2e2':'transparent',
-                  border:'1px solid '+(isCor?'#bbf7d0':isAns&&!isCor?'#fecaca':'transparent'),
-                  color:isCor?'#166534':isAns&&!isCor?'#991b1b':'#374151'}}>
-                  {isCor?'✓ ':isAns&&!isCor?'✗ ':''}{ch}
-                  {isAns&&isCor?' (your answer — correct)':''}
-                  {isAns&&!isCor?' (your answer)':''}
-                  {!isAns&&isCor?' (correct answer)':''}
+              const bg=isCor?'#dcfce7':isAns&&!isCor?'#fee2e2':'transparent';
+              const bdr='1px solid '+(isCor?'#bbf7d0':isAns&&!isCor?'#fecaca':'transparent');
+              const col=isCor?'#166534':isAns&&!isCor?'#991b1b':'#374151';
+              const lbl=isAns&&isCor?' ✓ your answer':isAns&&!isCor?' ✗ your answer':!isAns&&isCor?' ← correct':'';
+              return(isCor||isAns)?(
+                <div key={ci} style={{padding:'6px 10px',borderRadius:8,marginBottom:4,fontSize:14,background:bg,border:bdr,color:col}}>
+                  {isCor?'✓ ':isAns&&!isCor?'✗ ':''}{ch}<span style={{fontSize:12,fontWeight:600}}>{lbl}</span>
                 </div>
-              );
+              ):null;
             })}
             {q.format==='numeric'&&(
               <div>
