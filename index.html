@@ -647,8 +647,251 @@ function QuestionForm({initQ,standards,onSave,onCancel}){
 // ═══════════════════════════════════════════════════════════
 // QUESTION BANK UPLOADER (AI removed — placeholder only)
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// QUESTION PASTE IMPORTER
+// ═══════════════════════════════════════════════════════════
+function parseQuestionText(raw){
+  // Split into blocks by blank lines
+  const blocks=raw.trim().split(/
+\s*
+/).filter(Boolean);
+  const questions=[];
+  blocks.forEach(block=>{
+    const lines=block.trim().split('
+').map(l=>l.trim()).filter(Boolean);
+    if(!lines.length) return;
+
+    // Detect question line (starts with number+period or number+paren)
+    const qMatch=lines[0].match(/^[\d]+[.)]\s*(.+)/);
+    if(!qMatch) return;
+    const text=qMatch[1].trim();
+
+    // Check for numeric format: NUM correct tolerance
+    const numLine=lines.find(l=>/^NUM\s+/i.test(l));
+    if(numLine){
+      const parts=numLine.split(/\s+/);
+      questions.push({
+        id:'pq'+Date.now()+Math.random().toString(36).slice(2),
+        text,format:'numeric',choices:[],correct:Number(parts[1])||0,
+        correctMulti:[],tolerance:Number(parts[2])||0.5,
+        standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},image:null,
+      });
+      return;
+    }
+
+    // Parse choices (lines starting with letter+period or letter+paren, optional * for correct)
+    const choiceLines=lines.slice(1).filter(l=>/^\*?[a-zA-Z][.)]\s*/.test(l));
+    if(!choiceLines.length) return;
+
+    const choices=[];
+    const correctIdxs=[];
+    choiceLines.forEach((cl,i)=>{
+      const isCorrect=cl.startsWith('*');
+      const choiceText=cl.replace(/^\*?[a-zA-Z][.)]\s*/,'').trim();
+      choices.push(choiceText);
+      if(isCorrect) correctIdxs.push(i);
+    });
+
+    const isMulti=correctIdxs.length>1;
+    questions.push({
+      id:'pq'+Date.now()+Math.random().toString(36).slice(2),
+      text,
+      format:isMulti?'multi':'mc',
+      choices,
+      correct:correctIdxs[0]??0,
+      correctMulti:correctIdxs,
+      tolerance:0.5,
+      standards:[],
+      difficulty:'Basic',
+      explanation:'',
+      wrongExplanations:{},
+      image:null,
+    });
+  });
+  return questions;
+}
+
 function QuestionBankUploader({standards,onAdd}){
-  return null; // AI features removed
+  const [mode,setMode]=useState('idle'); // idle | paste | review
+  const [rawText,setRawText]=useState('');
+  const [parsed,setParsed]=useState([]);
+  const [editIdx,setEditIdx]=useState(null);
+  const [editForm,setEditForm]=useState(null);
+
+  function handleParse(){
+    const qs=parseQuestionText(rawText);
+    if(!qs.length){alert('No questions detected. Check your formatting.');return;}
+    setParsed(qs.map(q=>({...q,_checked:true})));
+    setMode('review');
+  }
+
+  function updateParsed(idx,patch){
+    setParsed(prev=>prev.map((q,i)=>i===idx?{...q,...patch}:q));
+  }
+
+  function handleImport(){
+    onAdd(parsed.filter(q=>q._checked).map(({_checked,...q})=>q));
+    setParsed([]);setRawText('');setMode('idle');
+  }
+
+  function toggleStd(idx,sid){
+    const q=parsed[idx];
+    const stds=q.standards.includes(sid)?q.standards.filter(x=>x!==sid):[...q.standards,sid];
+    updateParsed(idx,{standards:stds});
+  }
+
+  if(mode==='idle') return(
+    <div style={{border:'1.5px dashed #93b4f8',borderRadius:10,padding:'12px 16px',background:'#f0f4ff',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div>
+        <div className="fw6 text-sm" style={{color:'#1e2d5a'}}>📋 Paste questions from Word or text</div>
+        <div className="text-xs text-muted">Supports numbered MC, multi-select and numeric questions</div>
+      </div>
+      <button className="btn btn-secondary btn-sm" onClick={()=>setMode('paste')}>Paste questions</button>
+    </div>
+  );
+
+  if(mode==='paste') return(
+    <div className="card mb12" style={{border:'1.5px solid #93b4f8'}}>
+      <div className="fw7 mb4" style={{fontSize:15}}>Paste your questions</div>
+      <div className="text-xs text-muted mb12" style={{lineHeight:1.7}}>
+        Format: number the questions, letter the choices, put <code style={{background:'#e0e7ff',padding:'1px 5px',borderRadius:4}}>*</code> before the correct answer. Blank line between questions.<br/>
+        <strong>MC:</strong> <code style={{background:'#f1f5f9',padding:'1px 5px',borderRadius:4}}>1. Question text</code> then <code style={{background:'#f1f5f9',padding:'1px 5px',borderRadius:4}}>*a. Correct</code> <code style={{background:'#f1f5f9',padding:'1px 5px',borderRadius:4}}>b. Wrong</code><br/>
+        <strong>Multi-select:</strong> mark multiple answers with <code style={{background:'#e0e7ff',padding:'1px 5px',borderRadius:4}}>*</code><br/>
+        <strong>Numeric:</strong> add a line <code style={{background:'#f1f5f9',padding:'1px 5px',borderRadius:4}}>NUM 30 5</code> (correct=30, tolerance=±5)
+      </div>
+      <textarea className="input mb12" rows={10} value={rawText} onChange={e=>setRawText(e.target.value)}
+        placeholder={"1. Which ion rushes in during depolarization?
+a. K+
+b. Ca2+
+*c. Na+
+d. Cl-
+
+2. The resting membrane potential is approximately:
+NUM -70 5"}
+        style={{fontFamily:'monospace',fontSize:13,lineHeight:1.6}}
+      />
+      <div className="flex gap8">
+        <button className="btn btn-primary btn-sm" onClick={handleParse}>Parse questions</button>
+        <button className="btn btn-ghost btn-sm" onClick={()=>{setMode('idle');setRawText('');}}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  // Review mode — edit each question before importing
+  return(
+    <div className="card mb12" style={{border:'1.5px solid #93b4f8'}}>
+      <div className="flex-between mb12">
+        <div>
+          <div className="fw7" style={{fontSize:15}}>{parsed.length} question{parsed.length!==1?'s':''} detected</div>
+          <div className="text-sm text-muted">Set standards and difficulty for each, then import.</div>
+        </div>
+        <div className="flex gap8">
+          <button className="btn btn-primary btn-sm" onClick={handleImport}>
+            Import {parsed.filter(q=>q._checked).length} selected
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>setMode('paste')}>← Back</button>
+        </div>
+      </div>
+
+      {parsed.map((q,idx)=>(
+        <div key={q.id} style={{border:`1px solid ${q._checked?'#93b4f8':'#e5e7eb'}`,borderRadius:10,marginBottom:10,overflow:'hidden'}}>
+          {/* Header row */}
+          <div style={{padding:'10px 14px',background:q._checked?'#f0f4ff':'#f9fafb',display:'flex',alignItems:'flex-start',gap:10,cursor:'pointer'}}
+            onClick={()=>updateParsed(idx,{_checked:!q._checked})}>
+            <input type="checkbox" checked={q._checked} onChange={()=>{}} style={{marginTop:3,accentColor:'#3b5bdb',flexShrink:0}}/>
+            <div style={{flex:1}}>
+              <div className="fw6" style={{fontSize:14}}>{q.text}</div>
+              <div className="flex gap4 mt4 flex-wrap">
+                <span className="tag tag-blue">{q.format==='multi'?'Multi-select':q.format==='mc'?'MC':'Numeric'}</span>
+                <span className={`tag ${q.difficulty==='Basic'?'tag-green':q.difficulty==='Conceptual'?'tag-yellow':'tag-gray'}`}>{q.difficulty}</span>
+                {q.standards.length===0&&<span className="tag tag-gray" style={{color:'#dc2626',borderColor:'#fecaca',background:'#fff1f2'}}>⚠ No standard tagged</span>}
+                {q.standards.map(sid=>{const s=standards.find(x=>x.id===sid);return s?<span key={sid} className="std-badge">{s.code}</span>:null;})}
+              </div>
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{flexShrink:0}} onClick={e=>{e.stopPropagation();setEditIdx(editIdx===idx?null:idx);}}>
+              {editIdx===idx?'Close ▲':'Edit ▼'}
+            </button>
+          </div>
+
+          {/* Expanded editor */}
+          {editIdx===idx&&(
+            <div style={{padding:'14px 16px',borderTop:'1px solid #e5e7eb',background:'#fff'}}>
+              {/* Question text */}
+              <label>Question text</label>
+              <textarea className="input mt4 mb12" rows={2} value={q.text} onChange={e=>updateParsed(idx,{text:e.target.value})}/>
+
+              {/* Format + Difficulty */}
+              <div className="grid2 mb12" style={{gap:8}}>
+                <div>
+                  <label>Format</label>
+                  <select className="select mt4" value={q.format} onChange={e=>updateParsed(idx,{format:e.target.value})}>
+                    <option value="mc">Multiple choice (single)</option>
+                    <option value="multi">Multiple select (all that apply)</option>
+                    <option value="numeric">Numeric</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Difficulty</label>
+                  <select className="select mt4" value={q.difficulty} onChange={e=>updateParsed(idx,{difficulty:e.target.value})}>
+                    <option>Basic</option>
+                    <option>Conceptual</option>
+                    <option>Applied</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Standards */}
+              <label>Standards</label>
+              <div className="flex flex-wrap gap6 mt4 mb12">
+                {standards.map(s=>{const on=q.standards.includes(s.id);return(
+                  <button key={s.id} onClick={()=>toggleStd(idx,s.id)} style={{padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',border:'1.5px solid',borderColor:on?'#3b5bdb':'#d1d5db',background:on?'#dbeafe':'#f9fafb',color:on?'#1e40af':'#6b7280'}}>
+                    {s.code} {s.title}
+                  </button>
+                );})}
+              </div>
+
+              {/* Choices editor for MC/multi */}
+              {(q.format==='mc'||q.format==='multi')&&(
+                <div>
+                  <label>Choices {q.format==='multi'?'(check all correct)':'(select correct)'}</label>
+                  <div className="mt4">
+                    {q.choices.map((ch,ci)=>{
+                      const isCor=q.format==='mc'?q.correct===ci:(q.correctMulti||[]).includes(ci);
+                      return(
+                        <div key={ci} className="flex gap8 mb6" style={{alignItems:'center'}}>
+                          <div onClick={()=>{
+                            if(q.format==='mc') updateParsed(idx,{correct:ci});
+                            else{const cm=[...(q.correctMulti||[])];const i=cm.indexOf(ci);if(i>=0)cm.splice(i,1);else cm.push(ci);updateParsed(idx,{correctMulti:cm});}
+                          }} style={{width:18,height:18,borderRadius:q.format==='mc'?'50%':'3px',border:`2px solid ${isCor?'#3b5bdb':'#d1d5db'}`,background:isCor?'#3b5bdb':'transparent',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            {isCor&&<div style={{width:7,height:7,borderRadius:q.format==='mc'?'50%':'1px',background:'#fff'}}/>}
+                          </div>
+                          <input className="input" style={{flex:1}} value={ch} onChange={e=>{const chs=[...q.choices];chs[ci]=e.target.value;updateParsed(idx,{choices:chs});}}/>
+                          {q.choices.length>2&&<button className="btn btn-ghost btn-xs" style={{color:'#dc2626'}} onClick={()=>{const chs=[...q.choices];chs.splice(ci,1);updateParsed(idx,{choices:chs});}}>✕</button>}
+                        </div>
+                      );
+                    })}
+                    <button className="btn btn-ghost btn-sm mt4" onClick={()=>updateParsed(idx,{choices:[...q.choices,'']})}>+ Add choice</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Numeric */}
+              {q.format==='numeric'&&(
+                <div className="grid2 mt4" style={{gap:8}}>
+                  <div><label>Correct answer</label><input className="input mt4" type="number" value={q.correct} onChange={e=>updateParsed(idx,{correct:Number(e.target.value)})}/></div>
+                  <div><label>Tolerance (±)</label><input className="input mt4" type="number" value={q.tolerance||0.5} onChange={e=>updateParsed(idx,{tolerance:Number(e.target.value)})}/></div>
+                </div>
+              )}
+
+              {/* Explanation */}
+              <label className="mt12">Explanation for correct answer</label>
+              <textarea className="input mt4" rows={2} value={q.explanation||''} onChange={e=>updateParsed(idx,{explanation:e.target.value})} placeholder="Why is the correct answer right?"/>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════
