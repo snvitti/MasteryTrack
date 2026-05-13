@@ -2097,7 +2097,17 @@ function App(){
           seed.attempts = SEED_ATTEMPTS;
           setCourses([seed]);
         } else {
-          setCourses(coursesWithAttempts);
+          // Fix any courses that were saved without questions (re-save them)
+          const fixed = await Promise.all(coursesWithAttempts.map(async course => {
+            if((course.questions||[]).length === 0 && course.id === 'c1') {
+              // Re-seed the default course with full data
+              const fullCourse = {...SEED_COURSE, ...course, questions: SEED_QUESTIONS, units: SEED_UNITS};
+              await api('saveCourse', {course: fullCourse});
+              return {...fullCourse, attempts: course.attempts};
+            }
+            return course;
+          }));
+          setCourses(fixed);
         }
         setInstructorAccounts(iRes.accounts);
       } catch(e) {
