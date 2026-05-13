@@ -369,6 +369,48 @@ function bestOverallPct(attempts,studentId,assessmentId,questions){
 }
 
 // ═══════════════════════════════════════════════════════════
+// QUESTION POOL SAMPLER
+// ═══════════════════════════════════════════════════════════
+// Seeded shuffle so same student+attempt gets reproducible order if needed
+function seededShuffle(arr, seed){
+  const a=[...arr];
+  let s=seed;
+  for(let i=a.length-1;i>0;i--){
+    s=(s*1664525+1013904223)&0xffffffff;
+    const j=Math.abs(s)%(i+1);
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// Draw questions from pool based on poolSettings
+// poolSettings: {[standardId]: {Basic:n, Conceptual:n, Applied:n}}
+// Returns an array of questions for this student session
+function drawFromPool(allQuestions, poolSettings, randomize){
+  if(!poolSettings||Object.keys(poolSettings).length===0) return [];
+  const drawn=[];
+  const seed=Date.now();
+  Object.entries(poolSettings).forEach(([stdId, diffCounts])=>{
+    ['Basic','Conceptual','Applied'].forEach(diff=>{
+      const count=Number(diffCounts[diff])||0;
+      if(count===0) return;
+      // Get all questions tagged to this standard AND difficulty
+      const pool=allQuestions.filter(q=>
+        q.standards.includes(stdId) && q.difficulty===diff
+      );
+      // Shuffle pool and take 'count' questions
+      const shuffled=seededShuffle(pool, seed+stdId.length+diff.length);
+      drawn.push(...shuffled.slice(0,count));
+    });
+  });
+  // Remove duplicates (a question tagged to multiple standards might appear twice)
+  const seen=new Set();
+  const unique=drawn.filter(q=>{if(seen.has(q.id))return false;seen.add(q.id);return true;});
+  // Apply overall question order randomization if enabled
+  return randomize?seededShuffle(unique,seed):unique;
+}
+
+// ═══════════════════════════════════════════════════════════
 // SHARED COMPONENTS
 // ═══════════════════════════════════════════════════════════
 function MasteryCell({score,size='normal'}){
@@ -597,13 +639,16 @@ function QuestionBankUploader({standards,onAdd}){
 
 // ═══════════════════════════════════════════════════════════
 function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSaveSettings,onClose}){
-  const [view,setView]=useState('list');
+  const [view,setView]=useState('list'); // list | qform | pool
   const [localQs,setLocalQs]=useState(initQuestions);
   const [editQId,setEditQId]=useState(null);
   const [randomize,setRandomize]=useState(assessment.randomize||false);
   const [timeLimit,setTimeLimit]=useState(assessment.timeLimit||20);
   const [addTimeVal,setAddTimeVal]=useState(5);
   const [settingsSaved,setSettingsSaved]=useState(false);
+  const [poolSettings,setPoolSettings]=useState(assessment.poolSettings||{});
+  const asmStandardIds=assessment.standards||standards.map(s=>s.id);
+  const asmStds=standards.filter(s=>asmStandardIds.includes(s.id));
 
 
   const asmStds=standards;
@@ -632,6 +677,7 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
       <div className="flex-between mb16">
         <div><div className="fw7" style={{fontSize:18}}>{assessment.title}</div><div className="text-sm text-muted">{assessment.desc}</div></div>
         <div className="flex gap8">
+          <button className={`btn btn-sm ${view==='pool'?'btn-primary':'btn-secondary'}`} onClick={()=>setView(view==='pool'?'list':'pool')}>⚙ Pool settings</button>
           <button className="btn btn-secondary btn-sm" onClick={()=>{setView('qform');setEditQId(null);}}>+ Add question</button>
 
         </div>
@@ -667,6 +713,46 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
       </div>
 
       <QuestionBankUploader standards={asmStds} onAdd={qs=>setLocalQs(prev=>[...prev,...qs])}/>
+      {view==='pool'&&(
+        <div className="card mb16" style={{border:'1.5px solid #a5b4fc'}}>
+          <div className="fw7 mb4" style={{fontSize:15}}>Question pool settings</div>
+          <div className="text-sm text-muted mb16">For each standard and difficulty, set how many questions to draw per student. Leave at 0 to skip. Students always get the same total number, randomly selected from your question bank.</div>
+          {asmStds.map(s=>{
+            const pool=poolSettings[s.id]||{Basic:0,Conceptual:0,Applied:0};
+            const counts={Basic:localQs.filter(q=>q.standards.includes(s.id)&&q.difficulty==='Basic').length,Conceptual:localQs.filter(q=>q.standards.includes(s.id)&&q.difficulty==='Conceptual').length,Applied:localQs.filter(q=>q.standards.includes(s.id)&&q.difficulty==='Applied').length};
+            const totalDraw=(Number(pool.Basic)||0)+(Number(pool.Conceptual)||0)+(Number(pool.Applied)||0);
+            return(
+              <div key={s.id} style={{marginBottom:16,padding:'12px 14px',background:'#f8faff',borderRadius:10,border:'0.5px solid #c5d0f0'}}>
+                <div className="flex-between mb10">
+                  <div><span className="std-badge">{s.code}</span> <span className="fw6">{s.title}</span></div>
+                  {totalDraw>0&&<span className="tag tag-blue">Draw {totalDraw} question{totalDraw!==1?'s':''}</span>}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+                  {['Basic','Conceptual','Applied'].map(diff=>{
+                    const avail=counts[diff];
+                    const val=Number(pool[diff])||0;
+                    const over=val>avail;
+                    return(
+                      <div key={diff}>
+                        <label style={{fontSize:11,fontWeight:600,color:diff==='Basic'?'#166534':diff==='Conceptual'?'#854d0e':'#374151'}}>{diff} <span style={{fontWeight:400,color:'#9ca3af'}}>({avail} in pool)</span></label>
+                        <input type="number" min="0" max={avail} value={val}
+                          onChange={e=>setPoolSettings(p=>({...p,[s.id]:{...(p[s.id]||{Basic:0,Conceptual:0,Applied:0}),[diff]:Math.max(0,Number(e.target.value))}}))}
+                          style={{width:'100%',padding:'6px 8px',border:`1px solid ${over?'#dc2626':'#c5d0f0'}`,borderRadius:8,fontSize:14,marginTop:4,background:over?'#fff1f2':'#fff'}}
+                        />
+                        {over&&<div style={{fontSize:11,color:'#dc2626',marginTop:2}}>Only {avail} available</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex-between mt4">
+            <div className="text-sm text-muted">Total questions per student: <strong>{Object.values(poolSettings).reduce((t,d)=>t+(Number(d.Basic)||0)+(Number(d.Conceptual)||0)+(Number(d.Applied)||0),0)}</strong></div>
+            <button className="btn btn-primary btn-sm" onClick={()=>{onSaveSettings({poolSettings,randomize,timeLimit});setSettingsSaved(true);setTimeout(()=>setSettingsSaved(false),2500);setView('list');}}>Save pool settings</button>
+          </div>
+        </div>
+      )}
 
 
       {/* Coverage matrix */}
@@ -1570,36 +1656,29 @@ function AssessmentPicker({units,questions,standards,videos,studentName,studentI
   }
 
   if(picked){
-    // Match questions by ID — try exact match first
-    const qIds=picked.questionIds||[];
-    let qs=questions.filter(q=>qIds.includes(q.id));
-    // If no match (IDs stored as different type), try string comparison
-    if(qs.length===0&&qIds.length>0){
-      qs=questions.filter(q=>qIds.map(String).includes(String(q.id)));
+    let qs=[];
+    const hasPool=picked.poolSettings&&Object.keys(picked.poolSettings).length>0&&
+      Object.values(picked.poolSettings).some(d=>(Number(d.Basic)||0)+(Number(d.Conceptual)||0)+(Number(d.Applied)||0)>0);
+
+    if(hasPool){
+      // Draw randomly from pool
+      qs=drawFromPool(questions,picked.poolSettings,picked.randomize);
+    } else {
+      // Legacy: use fixed questionIds
+      const qIds=picked.questionIds||[];
+      qs=questions.filter(q=>qIds.includes(q.id));
+      if(qs.length===0&&qIds.length>0)
+        qs=questions.filter(q=>qIds.map(String).includes(String(q.id)));
+      if(picked.randomize) qs=[...qs].sort(()=>Math.random()-.5);
     }
-    // Apply randomize question ORDER if enabled
-    if(picked.randomize) qs=[...qs].sort(()=>Math.random()-.5);
-    // Guard: genuinely no questions (assessment not built yet)
-    if(qs.length===0&&qIds.length===0){
+
+    if(qs.length===0){
       return(
         <div style={{maxWidth:540,margin:'0 auto'}}>
           <div className="card" style={{padding:32,textAlign:'center'}}>
             <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-            <div className="fw7" style={{fontSize:18,marginBottom:8}}>No questions yet</div>
-            <div className="text-muted mb20">This assessment has no questions yet. Please contact your instructor.</div>
-            <button className="btn btn-secondary" onClick={()=>setPicked(null)}>← Back</button>
-          </div>
-        </div>
-      );
-    }
-    // If IDs exist but questions didn't load, show loading state
-    if(qs.length===0&&qIds.length>0){
-      return(
-        <div style={{maxWidth:540,margin:'0 auto'}}>
-          <div className="card" style={{padding:32,textAlign:'center'}}>
-            <Spinner/>
-            <div className="fw6 mt12">Loading questions…</div>
-            <div className="text-sm text-muted mt4 mb16">If this persists, please refresh the page.</div>
+            <div className="fw7" style={{fontSize:18,marginBottom:8}}>{hasPool?'Not enough questions in pool':'No questions yet'}</div>
+            <div className="text-muted mb20">{hasPool?'Add more questions to your question bank to meet the pool requirements.':'This assessment has no questions yet. Please contact your instructor.'}</div>
             <button className="btn btn-secondary" onClick={()=>setPicked(null)}>← Back</button>
           </div>
         </div>
