@@ -425,82 +425,13 @@ function ImageUploader({value,onChange}){
 // ═══════════════════════════════════════════════════════════
 // AI HELPER
 // ═══════════════════════════════════════════════════════════
-async function claudeCall(system,userMsg,maxTokens=1500){
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,system,messages:[{role:'user',content:userMsg}]})
-  });
-  const data=await resp.json();
-  return(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
-}
+// AI features removed
 
-function parseJSON(raw){
-  return JSON.parse(raw.replace(/```json|```/g,'').trim());
-}
 
-// ═══════════════════════════════════════════════════════════
-// SYLLABUS UPLOADER
-// ═══════════════════════════════════════════════════════════
-function SyllabusUploader({onExtracted}){
-  const [state,setState]=useState('idle');
-  const [preview,setPreview]=useState([]);
-  const [err,setErr]=useState('');
-  const [drag,setDrag]=useState(false);
-  const fileRef=useRef();
-
-  async function processFile(file){
-    setState('loading');
-    try{
-      const SYS=`Extract ALL learning objectives from this syllabus. Return ONLY a valid JSON array, no markdown. Schema: [{"code":"string","title":"string","desc":"string"}]. code=short alphanumeric label, title=3-6 words, desc=1 sentence action verb.`;
-      let msg;
-      if(file.type==='application/pdf'){
-        const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-        msg=[{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:'Extract learning objectives as JSON.'}];
-      } else {
-        const text=await file.text();
-        msg=`Extract learning objectives as JSON:\n\n${text.slice(0,8000)}`;
-      }
-      const raw=await claudeCall(SYS,msg);
-      const parsed=parseJSON(raw);
-      setPreview(parsed.map((s,i)=>({...s,_id:'syl'+i+Date.now(),checked:true})));
-      setState('preview');
-    }catch(e){setErr('Could not extract objectives. Ensure the file has readable text.');setState('error');}
-  }
-
-  if(state==='loading') return <div className="card mb16" style={{textAlign:'center',padding:28,border:'2px dashed #c7d2fe',background:'#f8f7ff'}}><Spinner/><div style={{marginTop:10,fontWeight:600,color:'#4F46E5'}}>Reading syllabus with AI…</div></div>;
-  if(state==='error') return <div className="info-box info-error flex-between mb16"><span>⚠ {err}</span><button className="btn btn-ghost btn-sm" onClick={()=>setState('idle')}>Try again</button></div>;
-  if(state==='preview') return(
-    <div className="card mb16" style={{border:'1.5px solid #a5b4fc'}}>
-      <div className="flex-between mb12">
-        <div><div className="fw7" style={{fontSize:15}}>AI found {preview.length} objectives</div><div className="text-sm text-muted">Uncheck any to exclude. Replaces all current standards.</div></div>
-        <div className="flex gap8">
-          <button className="btn btn-primary btn-sm" onClick={()=>{onExtracted(preview.filter(s=>s.checked).map(s=>({id:'s'+Date.now()+Math.random(),code:s.code,title:s.title,desc:s.desc})));setState('idle');setPreview([]);}}>Import selected</button>
-          <button className="btn btn-ghost btn-sm" onClick={()=>{setState('idle');setPreview([]);}}>Cancel</button>
-        </div>
-      </div>
-      <div style={{maxHeight:340,overflowY:'auto'}}>
-        {preview.map((s,i)=>(
-          <div key={s._id} className={`preview-item ${s.checked?'checked':''}`} onClick={()=>setPreview(prev=>prev.map((x,j)=>j===i?{...x,checked:!x.checked}:x))}>
-            <input type="checkbox" checked={s.checked} onChange={()=>{}} style={{marginTop:2,accentColor:'#4F46E5',flexShrink:0}}/>
-            <div><div className="flex gap8"><span className="std-badge">{s.code}</span><span className="fw6" style={{fontSize:14}}>{s.title}</span></div>{s.desc&&<div className="text-sm text-muted mt4">{s.desc}</div>}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-  return(
-    <div className={`drop-zone ${drag?'drag-over':''}`} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);const f=e.dataTransfer.files[0];if(f)processFile(f);}} onClick={()=>fileRef.current.click()}>
-      <input ref={fileRef} type="file" accept=".pdf,.txt,.doc,.docx" style={{display:'none'}} onChange={e=>{if(e.target.files[0])processFile(e.target.files[0]);e.target.value='';}}/>
-      <div style={{fontSize:28,marginBottom:8}}>📄</div>
-      <div className="fw7" style={{color:'#4F46E5',marginBottom:4}}>Upload syllabus</div>
-      <div className="text-sm text-muted mb12">Drag & drop or click — PDF or text</div>
-      <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 14px',borderRadius:20,background:'#4F46E5',color:'#fff',fontSize:13,fontWeight:500}}>✦ AI extracts objectives automatically</div>
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════
 // STANDARDS MANAGER
+
 // ═══════════════════════════════════════════════════════════
 function StandardsManager({standards,setStandards}){
   const [editId,setEditId]=useState(null);
@@ -518,7 +449,7 @@ function StandardsManager({standards,setStandards}){
         <div><div className="section-title">Standards</div><div className="section-sub" style={{marginBottom:0}}>Define course learning objectives.</div></div>
         <button className="btn btn-secondary btn-sm" onClick={()=>setShowBulk(!showBulk)}>{showBulk?'Hide':'+ Bulk paste'}</button>
       </div>
-      <SyllabusUploader onExtracted={ns=>setStandards(ns)}/>
+
       {showBulk&&<div className="card mb16"><label>One per line: CODE Title</label><textarea className="input mt4" rows={4} value={bulk} onChange={e=>setBulk(e.target.value)} placeholder={'1.6 Related Rates\n1.7 Mean Value Theorem'}/><button className="btn btn-primary btn-sm mt8" onClick={parseBulk}>Import</button></div>}
       {standards.length===0&&<div className="card mb16" style={{textAlign:'center',color:'#9ca3af',padding:28}}>No standards yet. Upload a syllabus above or add one manually.</div>}
       {standards.map(s=>(
@@ -642,59 +573,15 @@ function QuestionForm({initQ,standards,onSave,onCancel}){
 }
 
 // ═══════════════════════════════════════════════════════════
-// QUESTION BANK UPLOADER
+// QUESTION BANK UPLOADER (AI removed — placeholder only)
 // ═══════════════════════════════════════════════════════════
 function QuestionBankUploader({standards,onAdd}){
-  const [state,setState]=useState('idle');
-  const [preview,setPreview]=useState([]);
-  const [err,setErr]=useState('');
-  const fileRef=useRef();
-
-  async function processFile(file){
-    setState('loading');
-    try{
-      const text=await file.text();
-      const SYS=`You are a quiz-question parser. Given text with questions and answers, extract them. Return ONLY a valid JSON array, no markdown. Schema per item: {"text":"string","format":"mc","choices":["string"],"correct":0,"correctMulti":[],"difficulty":"Basic","explanation":"string","wrongExplanations":{}}. format="mc" single correct, "multi" multiple correct, "numeric". correct=0-based index for mc. correctMulti=array of indices for multi. difficulty=Basic|Conceptual|Applied. wrongExplanations={index:"explanation"} for incorrect choices.`;
-      const raw=await claudeCall(SYS,`Parse these questions:\n\n${text.slice(0,8000)}`);
-      const parsed=parseJSON(raw);
-      setPreview(parsed.map((q,i)=>({...q,id:'uq'+i+Date.now(),standards:[],image:null,checked:true,tolerance:0.5,correctMulti:q.correctMulti||[],wrongExplanations:q.wrongExplanations||{}})));
-      setState('preview');
-    }catch(e){setErr('Could not parse questions.');setState('error');}
-  }
-
-  if(state==='loading') return <div className="card mb12" style={{textAlign:'center',padding:22,border:'2px dashed #c7d2fe',background:'#f8f7ff'}}><Spinner/><div style={{marginTop:8,fontWeight:600,color:'#4F46E5'}}>Parsing questions with AI…</div></div>;
-  if(state==='error') return <div className="info-box info-error flex-between mb8"><span>⚠ {err}</span><button className="btn btn-ghost btn-sm" onClick={()=>setState('idle')}>Try again</button></div>;
-  if(state==='preview') return(
-    <div className="card mb12" style={{border:'1.5px solid #a5b4fc'}}>
-      <div className="flex-between mb12">
-        <div><div className="fw7" style={{fontSize:14}}>AI parsed {preview.length} questions</div><div className="text-sm text-muted">Review then import.</div></div>
-        <div className="flex gap8"><button className="btn btn-primary btn-sm" onClick={()=>{onAdd(preview.filter(q=>q.checked));setState('idle');setPreview([]);}}>Import selected</button><button className="btn btn-ghost btn-sm" onClick={()=>{setState('idle');setPreview([]);}}>Cancel</button></div>
-      </div>
-      <div style={{maxHeight:300,overflowY:'auto'}}>
-        {preview.map((q,i)=>(
-          <div key={q.id} className={`preview-item ${q.checked?'checked':''}`} onClick={()=>setPreview(prev=>prev.map((x,j)=>j===i?{...x,checked:!x.checked}:x))}>
-            <input type="checkbox" checked={q.checked} onChange={()=>{}} style={{marginTop:2,accentColor:'#4F46E5',flexShrink:0}}/>
-            <div style={{flex:1}}>
-              <div className="fw6" style={{fontSize:14}}>{q.text}</div>
-              <div className="flex gap4 mt4 flex-wrap"><span className="tag tag-blue">{q.format==='multi'?'Multi-select':q.format==='mc'?'MC':'Numeric'}</span><span className="tag tag-gray">{q.difficulty}</span></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  return(
-    <div className="drop-zone-sm mb12" onClick={()=>fileRef.current.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)processFile(f);}}>
-      <input ref={fileRef} type="file" accept=".txt,.md" style={{display:'none'}} onChange={e=>{if(e.target.files[0])processFile(e.target.files[0]);e.target.value='';}}/>
-      <div className="fw6 text-sm" style={{color:'#6d28d9'}}>📂 Upload question bank (.txt or .md)</div>
-      <div className="text-xs text-muted">AI parses questions & auto-detects answers</div>
-    </div>
-  );
+  return null; // AI features removed
 }
 
 // ═══════════════════════════════════════════════════════════
 // ASSESSMENT BUILDER MODAL
+
 // ═══════════════════════════════════════════════════════════
 function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSaveSettings,onClose}){
   const [view,setView]=useState('list');
@@ -704,8 +591,7 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
   const [timeLimit,setTimeLimit]=useState(assessment.timeLimit||20);
   const [addTimeVal,setAddTimeVal]=useState(5);
   const [settingsSaved,setSettingsSaved]=useState(false);
-  const [genState,setGenState]=useState('idle');
-  const [genErr,setGenErr]=useState('');
+
 
   const asmStds=standards;
   const coverage={};
@@ -713,20 +599,6 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
   localQs.forEach(q=>{q.standards.forEach(sid=>{if(coverage[sid])coverage[sid][q.difficulty]=(coverage[sid][q.difficulty]||0)+1;});});
   const missing=[];
   asmStds.filter(s=>assessment.standards.includes(s.id)).forEach(s=>['Basic','Conceptual','Applied'].forEach(d=>{if(!(coverage[s.id]?.[d]))missing.push(`${s.code} ${d}`);}));
-
-  async function generateVariants(){
-    if(!localQs.length){setGenErr('Add at least one question first.');return;}
-    setGenState('loading');setGenErr('');
-    try{
-      const SYS=`Generate one VARIANT per question. Same concept, same difficulty, same format, DIFFERENT wording and numbers. Return ONLY a JSON array with same schema: [{text,format,choices,correct,correctMulti,difficulty,explanation,standards,wrongExplanations}]. Do not copy exact wording.`;
-      const input=localQs.map(q=>({text:q.text,format:q.format,choices:q.choices||[],correct:q.correct,correctMulti:q.correctMulti||[],difficulty:q.difficulty,explanation:q.explanation,standards:q.standards,wrongExplanations:q.wrongExplanations||{}}));
-      const raw=await claudeCall(SYS,`Generate one variant per question:\n\n${JSON.stringify(input)}`,2000);
-      const parsed=parseJSON(raw);
-      const variants=parsed.map((q,i)=>({...q,id:'var'+i+Date.now(),image:null,tolerance:localQs[i]?.tolerance||0.5,isAiVariant:true,correctMulti:q.correctMulti||[],wrongExplanations:q.wrongExplanations||{}}));
-      setLocalQs(prev=>[...prev,...variants]);
-      setGenState('done');setTimeout(()=>setGenState('idle'),3000);
-    }catch(e){setGenErr('AI generation failed.');setGenState('idle');}
-  }
 
   if(view==='qform') return(
     <div>
@@ -748,9 +620,7 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
         <div><div className="fw7" style={{fontSize:18}}>{assessment.title}</div><div className="text-sm text-muted">{assessment.desc}</div></div>
         <div className="flex gap8">
           <button className="btn btn-secondary btn-sm" onClick={()=>{setView('qform');setEditQId(null);}}>+ Add question</button>
-          <button className="btn btn-secondary btn-sm" style={{borderColor:'#7c3aed',color:'#7c3aed'}} onClick={generateVariants} disabled={genState==='loading'}>
-            {genState==='loading'?<><Spinner/> Generating…</>:genState==='done'?'✓ Variants added':'✦ Generate AI variants'}
-          </button>
+
         </div>
       </div>
 
@@ -784,7 +654,7 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
       </div>
 
       <QuestionBankUploader standards={asmStds} onAdd={qs=>setLocalQs(prev=>[...prev,...qs])}/>
-      {genErr&&<div className="info-box info-warn mb12">{genErr}</div>}
+
 
       {/* Coverage matrix */}
       <div className="card mb20">
@@ -817,7 +687,6 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
             <div className="flex gap4 mt6 flex-wrap">
               <span className="tag tag-blue">{q.format==='multi'?'Multi-select':q.format==='mc'?'MC':'Numeric'}</span>
               <span className={`tag ${q.difficulty==='Basic'?'tag-green':q.difficulty==='Conceptual'?'tag-yellow':'tag-gray'}`}>{q.difficulty} ({WEIGHTS[q.difficulty]}×)</span>
-              {q.isAiVariant&&<span className="tag tag-purple">✦ AI variant</span>}
               {q.standards.map(sid=>{const s=asmStds.find(x=>x.id===sid);return s?<span key={sid} className="std-badge">{s.code}</span>:null;})}
             </div>
           </div>
@@ -1663,7 +1532,7 @@ function StudentDashboard({attempts,standards,questions,studentId,studentName,co
 // ═══════════════════════════════════════════════════════════
 // STUDENT ASSESSMENT PICKER (with gating)
 // ═══════════════════════════════════════════════════════════
-function AssessmentPicker({units,questions,standards,videos,studentName,studentId,attempts,onSubmit,onBack}){
+function AssessmentPicker({units,questions,standards,videos,studentName,studentId,studentEmail,roster,attempts,onSubmit,onBack}){
   const [picked,setPicked]=useState(null);
 
   function isUnlocked(asm){
@@ -1673,9 +1542,27 @@ function AssessmentPicker({units,questions,standards,videos,studentName,studentI
   }
 
   if(picked){
-    let qs=questions.filter(q=>picked.questionIds.includes(q.id));
+    let qs=questions.filter(q=>(picked.questionIds||[]).includes(q.id));
+    // Apply randomize if enabled
     if(picked.randomize) qs=[...qs].sort(()=>Math.random()-.5);
-    return <AssessmentTaker assessment={picked} questions={qs} standards={standards} videos={videos} studentName={studentName} studentId={studentId} onSubmit={att=>{onSubmit(att);setPicked(null);}} onCancel={()=>setPicked(null)}/>;
+    // Guard: no questions loaded
+    if(qs.length===0){
+      return(
+        <div style={{maxWidth:540,margin:'0 auto'}}>
+          <div className="card" style={{padding:32,textAlign:'center'}}>
+            <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+            <div className="fw7" style={{fontSize:18,marginBottom:8}}>No questions available</div>
+            <div className="text-muted mb20">This assessment has no questions yet. Please contact your instructor.</div>
+            <button className="btn btn-secondary" onClick={()=>setPicked(null)}>← Back</button>
+          </div>
+        </div>
+      );
+    }
+    // Apply student time extension from roster
+    const rosterEntry=(roster||[]).find(s=>s.id===studentId||s.email===studentEmail);
+    const extraTime=rosterEntry?.extraTime||0;
+    const asmWithTime={...picked,timeLimit:(picked.timeLimit||20)+extraTime};
+    return <AssessmentTaker assessment={asmWithTime} questions={qs} standards={standards} videos={videos} studentName={studentName} studentId={studentId} onSubmit={att=>{onSubmit(att);setPicked(null);}} onCancel={()=>setPicked(null)}/>;
   }
 
   return(
@@ -1728,13 +1615,16 @@ function RosterManager({course,updateCourse}){
 
   function flash(text,type='success'){setMsg(text);setMsgType(type);setTimeout(()=>setMsg(''),3500);}
 
+  const [extraTimeId,setExtraTimeId]=useState(null);
+  const [extraTimeVal,setExtraTimeVal]=useState(0);
+
   function addStudent(){
     const e=email.trim().toLowerCase();
     const n=name.trim();
     if(!e||!n){flash('Both name and email are required.','error');return;}
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)){flash('Please enter a valid email address.','error');return;}
     if(roster.find(s=>s.email===e)){flash('A student with this email is already enrolled.','error');return;}
-    const newRoster=[...roster,{id:'stu_'+Date.now(),name:n,email:e}];
+    const newRoster=[...roster,{id:'stu_'+Date.now(),name:n,email:e,extraTime:0}];
     updateCourse({roster:newRoster});
     setEmail('');setName('');
     flash(`${n} added to the course.`);
@@ -1744,6 +1634,13 @@ function RosterManager({course,updateCourse}){
     updateCourse({roster:roster.filter(s=>s.id!==id)});
   }
 
+  function saveExtraTime(id){
+    const newRoster=roster.map(s=>s.id===id?{...s,extraTime:Number(extraTimeVal)||0}:s);
+    updateCourse({roster:newRoster});
+    setExtraTimeId(null);
+    flash('Extra time saved.');
+  }
+
   return(
     <div>
       <div className="section-title mb4">Student roster</div>
@@ -1751,12 +1648,27 @@ function RosterManager({course,updateCourse}){
       {msg&&<div className={`info-box ${msgType==='error'?'info-error':'info-success'} mb16`}>{msg}</div>}
       {roster.length===0&&<div className="card mb16" style={{textAlign:'center',color:'#9ca3af',padding:32}}>No students enrolled yet. Add students below.</div>}
       {roster.map(s=>(
-        <div key={s.id} style={{border:'1px solid #e5e7eb',borderRadius:10,padding:'11px 16px',marginBottom:8,background:'#fff',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-          <div>
-            <div className="fw6" style={{fontSize:14}}>{s.name}</div>
-            <div className="text-xs text-muted">{s.email}</div>
+        <div key={s.id} style={{border:'1px solid #e5e7eb',borderRadius:10,padding:'11px 16px',marginBottom:8,background:'#fff'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+            <div>
+              <div className="fw6" style={{fontSize:14}}>{s.name}</div>
+              <div className="text-xs text-muted">{s.email}</div>
+              {(s.extraTime||0)>0&&<div className="text-xs mt4" style={{color:'#1e40af',fontWeight:600}}>+{s.extraTime} min extra time</div>}
+            </div>
+            <div className="flex gap6">
+              <button className="btn btn-secondary btn-sm" onClick={()=>{setExtraTimeId(s.id);setExtraTimeVal(s.extraTime||0);}}>⏱ Extra time</button>
+              <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>removeStudent(s.id)}>Remove</button>
+            </div>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>removeStudent(s.id)}>Remove</button>
+          {extraTimeId===s.id&&(
+            <div style={{marginTop:10,padding:'10px 12px',background:'#f0f4ff',borderRadius:8,display:'flex',alignItems:'center',gap:10}}>
+              <span className="text-sm fw6">Extra time (minutes):</span>
+              <input type="number" min="0" max="120" value={extraTimeVal} onChange={e=>setExtraTimeVal(e.target.value)} style={{width:70,padding:'4px 8px',border:'0.5px solid #c5d0f0',borderRadius:7,fontSize:14,textAlign:'center'}}/>
+              <button className="btn btn-primary btn-sm" onClick={()=>saveExtraTime(s.id)}>Save</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setExtraTimeId(null)}>Cancel</button>
+              <span className="text-xs text-muted">Added to all assessments for this student</span>
+            </div>
+          )}
         </div>
       ))}
       <div className="card mt16">
@@ -2331,7 +2243,7 @@ function App(){
         <button className={`tab ${stuTab==='take'?'active':''}`} onClick={()=>setStuTab('take')}>Take assessment</button>
       </div>
       {stuTab==='dashboard'&&<StudentDashboard attempts={liveCourse.attempts||[]} standards={liveCourse.standards||[]} questions={liveCourse.questions||[]} studentId={student.id} studentName={student.name} courseName={liveCourse.name} units={liveCourse.units||[]} videos={liveCourse.videos||[]} onTake={()=>setStuTab('take')}/>}
-      {stuTab==='take'&&<AssessmentPicker units={liveCourse.units||[]} questions={liveCourse.questions||[]} standards={liveCourse.standards||[]} videos={liveCourse.videos||[]} studentName={student.name} studentId={student.id} attempts={liveCourse.attempts||[]} onSubmit={att=>{addAttempt(att,liveCourse.id);setStuTab('dashboard');}} onBack={()=>setStuTab('dashboard')}/>}
+      {stuTab==='take'&&<AssessmentPicker units={liveCourse.units||[]} questions={liveCourse.questions||[]} standards={liveCourse.standards||[]} videos={liveCourse.videos||[]} studentName={student.name} studentId={student.id} studentEmail={student.email} roster={liveCourse.roster||[]} attempts={liveCourse.attempts||[]} onSubmit={att=>{addAttempt(att,liveCourse.id);setStuTab('dashboard');}} onBack={()=>setStuTab('dashboard')}/>}
     </div></>
   );
 }
