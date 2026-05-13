@@ -1457,9 +1457,9 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
                           {q.explanation&&<div className="text-sm text-muted" style={{background:'#f4f3ef',borderRadius:6,padding:'7px',marginBottom:6}}><strong>Why correct:</strong> {q.explanation}</div>}
                           {wrongExp&&<div className="text-sm" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Why your answer was wrong:</strong> {wrongExp}</div>}
                           {q.format==='multi'&&Array.isArray(studentAns)&&studentAns.filter(i=>!(q.correctMulti||[]).includes(i)).map(i=>(q.wrongExplanations||{})[i]).filter(Boolean).map((exp,ei)=>(
-                          {q.format==='numeric'&&(q.wrongExplanations||{})['numeric']&&<div className="text-sm mt4" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Hint:</strong> {(q.wrongExplanations||{})['numeric']}</div>}
                             <div key={ei} className="text-sm mt4" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Wrong choice:</strong> {exp}</div>
                           ))}
+                          {q.format==='numeric'&&(q.wrongExplanations||{})['numeric']&&<div className="text-sm mt4" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Hint:</strong> {(q.wrongExplanations||{})['numeric']}</div>}
                         </div>
                       );
                     })}
