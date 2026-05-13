@@ -651,62 +651,38 @@ function QuestionForm({initQ,standards,onSave,onCancel}){
 // QUESTION PASTE IMPORTER
 // ═══════════════════════════════════════════════════════════
 function parseQuestionText(raw){
-  // Split into blocks by blank lines
-  const blocks=raw.trim().split(/
-\s*
-/).filter(Boolean);
+  // Split on double newlines to get question blocks
+  const normalised=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const blocks=normalised.split('\n\n').map(b=>b.trim()).filter(Boolean);
   const questions=[];
-  blocks.forEach(block=>{
-    const lines=block.trim().split('
-').map(l=>l.trim()).filter(Boolean);
-    if(!lines.length) return;
-
-    // Detect question line (starts with number+period or number+paren)
-    const qMatch=lines[0].match(/^[\d]+[.)]\s*(.+)/);
+  blocks.forEach(function(block){
+    const blines=block.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+    if(!blines.length) return;
+    var qMatch=blines[0].match(/^[0-9]+[.)][\s]+(.+)/);
+    if(!qMatch) qMatch=blines[0].match(/^[0-9]+[.)](\S.+)/);
     if(!qMatch) return;
-    const text=qMatch[1].trim();
-
-    // Check for numeric format: NUM correct tolerance
-    const numLine=lines.find(l=>/^NUM\s+/i.test(l));
+    var text=qMatch[1].trim();
+    // Numeric: line containing NUM
+    var numLine=null;
+    for(var ni=0;ni<blines.length;ni++){if(/^NUM[\s]/i.test(blines[ni])){numLine=blines[ni];break;}}
     if(numLine){
-      const parts=numLine.split(/\s+/);
-      questions.push({
-        id:'pq'+Date.now()+Math.random().toString(36).slice(2),
-        text,format:'numeric',choices:[],correct:Number(parts[1])||0,
-        correctMulti:[],tolerance:Number(parts[2])||0.5,
-        standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},image:null,
-      });
+      var nparts=numLine.split(/[\s]+/);
+      questions.push({id:'pq'+Date.now()+Math.random().toString(36).slice(2),text:text,format:'numeric',choices:[],correct:Number(nparts[1])||0,correctMulti:[],tolerance:Number(nparts[2])||0.5,standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},image:null});
       return;
     }
-
-    // Parse choices (lines starting with letter+period or letter+paren, optional * for correct)
-    const choiceLines=lines.slice(1).filter(l=>/^\*?[a-zA-Z][.)]\s*/.test(l));
+    // Choices: lines starting with optional * then a letter then . or )
+    var choiceLines=blines.slice(1).filter(function(l){return /^[*]?[a-zA-Z][.)][\s]/.test(l)||/^[*]?[a-zA-Z][.)]\S/.test(l);});
     if(!choiceLines.length) return;
-
-    const choices=[];
-    const correctIdxs=[];
-    choiceLines.forEach((cl,i)=>{
-      const isCorrect=cl.startsWith('*');
-      const choiceText=cl.replace(/^\*?[a-zA-Z][.)]\s*/,'').trim();
+    var choices=[];
+    var correctIdxs=[];
+    choiceLines.forEach(function(cl,ci){
+      var isCor=cl.charAt(0)==='*';
+      var choiceText=cl.replace(/^[*]?[a-zA-Z][.)][\s]*/,'').trim();
       choices.push(choiceText);
-      if(isCorrect) correctIdxs.push(i);
+      if(isCor) correctIdxs.push(ci);
     });
-
-    const isMulti=correctIdxs.length>1;
-    questions.push({
-      id:'pq'+Date.now()+Math.random().toString(36).slice(2),
-      text,
-      format:isMulti?'multi':'mc',
-      choices,
-      correct:correctIdxs[0]??0,
-      correctMulti:correctIdxs,
-      tolerance:0.5,
-      standards:[],
-      difficulty:'Basic',
-      explanation:'',
-      wrongExplanations:{},
-      image:null,
-    });
+    var isMulti=correctIdxs.length>1;
+    questions.push({id:'pq'+Date.now()+Math.random().toString(36).slice(2),text:text,format:isMulti?'multi':'mc',choices:choices,correct:correctIdxs[0]!==undefined?correctIdxs[0]:0,correctMulti:correctIdxs,tolerance:0.5,standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},image:null});
   });
   return questions;
 }
@@ -1878,9 +1854,100 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
 }
 
 // ═══════════════════════════════════════════════════════════
+// ATTEMPT REVIEW (student views past attempt)
+// ═══════════════════════════════════════════════════════════
+function AttemptReview({attempt,questions,assessment,standards,onBack}){
+  const {stdScores,overall}=scoreAttempt(attempt,questions);
+  const pct=overall.total>0?Math.round(overall.earned/overall.total*100):0;
+  const asmStds=standards.filter(s=>(assessment?.standards||[]).includes(s.id));
+  return(
+    <div style={{maxWidth:680,margin:'0 auto'}}>
+      <button className="btn btn-ghost mb16" onClick={onBack}>← Back to my progress</button>
+      <div className="card mb16" style={{padding:24}}>
+        <div className="fw7 mb4" style={{fontSize:18}}>{assessment?.title||'Assessment'} — Review</div>
+        <div className="text-sm text-muted mb16">{new Date(attempt.submittedAt).toLocaleString()}{attempt.timeExpired?' · Time expired':''}</div>
+        <div className="flex gap16 flex-wrap">
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:32,fontWeight:800,color:pct>=85?'#166534':pct>=60?'#854d0e':'#991b1b'}}>{pct}%</div>
+            <div className="text-xs text-muted">Overall score</div>
+          </div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:32,fontWeight:800,color:'#374151'}}>{overall.earned}/{overall.total}</div>
+            <div className="text-xs text-muted">Questions correct</div>
+          </div>
+        </div>
+      </div>
+      {asmStds.length>0&&(
+        <div className="card mb16">
+          <div className="fw6 mb12">Performance by standard</div>
+          {asmStds.map(s=>(
+            <div key={s.id} className="flex-between" style={{padding:'8px 0',borderBottom:'0.5px solid #f3f4f6'}}>
+              <div><span className="std-badge">{s.code}</span> <span style={{fontSize:14}}>{s.title}</span></div>
+              <MasteryCell score={stdScores[s.id]}/>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="fw7 mb12" style={{fontSize:18}}>Question by question</div>
+      {questions.map((q,qi)=>{
+        const ans=attempt.answers[q.id];
+        const credit=partialCredit(q,ans);
+        const correct=credit===1;
+        const partial=credit>0&&credit<1;
+        const ansText=q.format==='mc'?(q.choices[Number(ans)]||'No answer'):q.format==='multi'?(Array.isArray(ans)&&ans.length>0?ans.map(i=>q.choices[i]).join(', '):'No answer'):String(ans??'No answer');
+        const corrText=q.format==='mc'?q.choices[q.correct]:q.format==='multi'?(q.correctMulti||[]).map(i=>q.choices[i]).join(', '):String(q.correct);
+        const borderCol=correct?'#bbf7d0':partial?'#fde68a':'#fecaca';
+        const bgCol=correct?'#f0fdf4':partial?'#fefce8':'#fff1f2';
+        const statusLabel=correct?'✓ Correct':partial?'◐ Partial ('+Math.round(credit*100)+'%)':'✗ Incorrect';
+        const statusCol=correct?'#166534':partial?'#854d0e':'#991b1b';
+        return(
+          <div key={q.id} style={{border:'1px solid '+borderCol,borderRadius:12,padding:16,marginBottom:10,background:bgCol}}>
+            <div className="flex-between mb8">
+              <span style={{fontWeight:700,fontSize:13,color:'#6b7280'}}>Q{qi+1} · {q.difficulty}</span>
+              <span style={{fontWeight:700,fontSize:13,color:statusCol}}>{statusLabel}</span>
+            </div>
+            <div className="fw6 mb8" style={{fontSize:15,lineHeight:1.5}}>{q.text}</div>
+            {q.image&&<img src={q.image} alt="" style={{maxHeight:100,borderRadius:8,marginBottom:8,border:'1px solid #e5e7eb',display:'block'}}/>}
+            {q.format!=='numeric'&&q.choices.map((ch,ci)=>{
+              const isCor=q.format==='mc'?ci===q.correct:(q.correctMulti||[]).includes(ci);
+              const isAns=q.format==='mc'?Number(ans)===ci:(Array.isArray(ans)&&ans.map(Number).includes(ci));
+              if(!isCor&&!isAns) return null;
+              return(
+                <div key={ci} style={{padding:'6px 10px',borderRadius:8,marginBottom:4,fontSize:14,
+                  background:isCor?'#dcfce7':isAns&&!isCor?'#fee2e2':'transparent',
+                  border:'1px solid '+(isCor?'#bbf7d0':isAns&&!isCor?'#fecaca':'transparent'),
+                  color:isCor?'#166534':isAns&&!isCor?'#991b1b':'#374151'}}>
+                  {isCor?'✓ ':isAns&&!isCor?'✗ ':''}{ch}
+                  {isAns&&isCor?' (your answer — correct)':''}
+                  {isAns&&!isCor?' (your answer)':''}
+                  {!isAns&&isCor?' (correct answer)':''}
+                </div>
+              );
+            })}
+            {q.format==='numeric'&&(
+              <div>
+                <div className="text-sm mb4" style={{color:'#374151'}}><strong>Your answer:</strong> {ansText}</div>
+                <div className="text-sm mb4" style={{color:'#166534'}}><strong>Correct:</strong> {q.correct} ± {q.tolerance||0.5}</div>
+              </div>
+            )}
+            {q.explanation&&<div className="text-sm mt8" style={{background:'rgba(0,0,0,.04)',borderRadius:7,padding:'8px 10px'}}><strong>Explanation:</strong> {q.explanation}</div>}
+            {q.format==='mc'&&!correct&&(q.wrongExplanations||{})[Number(ans)]&&(
+              <div className="text-sm mt6" style={{background:'#fef9c3',borderRadius:7,padding:'8px 10px',border:'1px solid #fde68a',color:'#854d0e'}}><strong>Why your answer was wrong:</strong> {q.wrongExplanations[Number(ans)]}</div>
+            )}
+            {q.format==='numeric'&&!correct&&(q.wrongExplanations||{})['numeric']&&(
+              <div className="text-sm mt6" style={{background:'#fef9c3',borderRadius:7,padding:'8px 10px',border:'1px solid #fde68a',color:'#854d0e'}}><strong>Hint:</strong> {q.wrongExplanations['numeric']}</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // STUDENT DASHBOARD
 // ═══════════════════════════════════════════════════════════
-function StudentDashboard({attempts,standards,questions,studentId,studentName,courseName,units,videos,onTake}){
+function StudentDashboard({attempts,standards,questions,studentId,studentName,courseName,units,videos,onTake,onReview}){
   const myAttempts=attempts.filter(a=>a.studentId===studentId);
   const best=bestMastery(myAttempts,studentId,questions);
   const allAsms=units.flatMap(u=>u.assessments);
@@ -1926,10 +1993,19 @@ function StudentDashboard({attempts,standards,questions,studentId,studentName,co
         const asm=allAsms.find(a=>a.id===att.assessmentId);
         const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
         const {overall}=scoreAttempt(att,qs);
+        const pct=overall.total>0?Math.round(overall.earned/overall.total*100):0;
         return(
-          <div key={att.id} className="card mb8 flex-between">
-            <div><div className="fw6 text-sm">{asm?.title||'Assessment'}</div><div className="text-xs text-muted mt4">{new Date(att.submittedAt).toLocaleString()}{att.timeExpired?' — time expired':''}</div></div>
-            <span className="tag tag-blue">{overall.earned}/{overall.total} ({overall.total>0?Math.round(overall.earned/overall.total*100):0}%)</span>
+          <div key={att.id} className="card mb8">
+            <div className="flex-between mb8">
+              <div>
+                <div className="fw6 text-sm">{asm?.title||'Assessment'}</div>
+                <div className="text-xs text-muted mt4">{new Date(att.submittedAt).toLocaleString()}{att.timeExpired?' — time expired':''}</div>
+              </div>
+              <div className="flex gap8">
+                <span className={`tag ${pct>=85?'tag-green':pct>=60?'tag-yellow':'tag-red'}`}>{pct}% ({overall.earned}/{overall.total})</span>
+                <button className="btn btn-secondary btn-sm" onClick={()=>onReview&&onReview(att,qs,asm)}>Review →</button>
+              </div>
+            </div>
           </div>
         );
       })}
@@ -2444,6 +2520,7 @@ function App(){
   const [instTab,setInstTab]=useState('dashboard');
   const [student,setStudent]=useState(null);
   const [stuTab,setStuTab]=useState('dashboard');
+  const [reviewAttempt,setReviewAttempt]=useState(null);
   const [selectedStudentCourse,setSelectedStudentCourse]=useState(null);
   const [dbLoading,setDbLoading]=useState(true);
   const [dbError,setDbError]=useState('');
@@ -2675,12 +2752,24 @@ function App(){
   return(
     <><StudentNav/>
     <div className="page">
-      <div className="tabs">
-        <button className={`tab ${stuTab==='dashboard'?'active':''}`} onClick={()=>setStuTab('dashboard')}>My progress</button>
-        <button className={`tab ${stuTab==='take'?'active':''}`} onClick={()=>setStuTab('take')}>Take assessment</button>
-      </div>
-      {stuTab==='dashboard'&&<StudentDashboard attempts={liveCourse.attempts||[]} standards={liveCourse.standards||[]} questions={liveCourse.questions||[]} studentId={student.id} studentName={student.name} courseName={liveCourse.name} units={liveCourse.units||[]} videos={liveCourse.videos||[]} onTake={()=>setStuTab('take')}/>}
-      {stuTab==='take'&&<AssessmentPicker units={liveCourse.units||[]} questions={liveCourse.questions||[]} standards={liveCourse.standards||[]} videos={liveCourse.videos||[]} studentName={student.name} studentId={student.id} studentEmail={student.email} roster={liveCourse.roster||[]} attempts={liveCourse.attempts||[]} onSubmit={att=>{addAttempt(att,liveCourse.id);setStuTab('dashboard');}} onBack={()=>setStuTab('dashboard')}/>}
+      {stuTab==='review'&&reviewAttempt?(
+        <AttemptReview
+          attempt={reviewAttempt.att}
+          questions={reviewAttempt.qs}
+          assessment={reviewAttempt.asm}
+          standards={liveCourse.standards||[]}
+          onBack={()=>{setStuTab('dashboard');setReviewAttempt(null);}}
+        />
+      ):(
+        <>
+          <div className="tabs">
+            <button className={`tab ${stuTab==='dashboard'?'active':''}`} onClick={()=>setStuTab('dashboard')}>My progress</button>
+            <button className={`tab ${stuTab==='take'?'active':''}`} onClick={()=>setStuTab('take')}>Take assessment</button>
+          </div>
+          {stuTab==='dashboard'&&<StudentDashboard attempts={liveCourse.attempts||[]} standards={liveCourse.standards||[]} questions={liveCourse.questions||[]} studentId={student.id} studentName={student.name} courseName={liveCourse.name} units={liveCourse.units||[]} videos={liveCourse.videos||[]} onTake={()=>setStuTab('take')} onReview={(att,qs,asm)=>{setReviewAttempt({att,qs,asm});setStuTab('review');}}/>}
+          {stuTab==='take'&&<AssessmentPicker units={liveCourse.units||[]} questions={liveCourse.questions||[]} standards={liveCourse.standards||[]} videos={liveCourse.videos||[]} studentName={student.name} studentId={student.id} studentEmail={student.email} roster={liveCourse.roster||[]} attempts={liveCourse.attempts||[]} onSubmit={att=>{addAttempt(att,liveCourse.id);setStuTab('dashboard');}} onBack={()=>setStuTab('dashboard')}/>}
+        </>
+      )}
     </div></>
   );
 }
