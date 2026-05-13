@@ -1364,6 +1364,11 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
   if(phase==='taking'){
     const q=questions[curQ];
     const multiAns=Array.isArray(answers[q.id])?answers[q.id]:[];
+    // Compute display order for choices (stable shuffle per question if randomizeChoices is on)
+    const rawIdxs=(q.choices||[]).map((_,i)=>i);
+    const displayIdxs=q.randomizeChoices
+      ?[...rawIdxs].sort((a,b)=>{const seed=(q.id||'').split('').reduce((s,ch)=>s+ch.charCodeAt(0),0);return Math.sin(seed*(a+1))-Math.sin(seed*(b+1));})
+      :rawIdxs;
     return(
       <div style={{maxWidth:680,margin:'0 auto'}}>
         <div className="flex-between mb20" style={{gap:8}}>
@@ -1384,27 +1389,21 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
           </div>
           <div style={{fontSize:17,fontWeight:500,marginBottom:q.image?12:22,lineHeight:1.6}}>{q.text}</div>
           {q.image&&<img src={q.image} alt="Q" style={{maxWidth:'100%',maxHeight:220,borderRadius:8,border:'1px solid #e5e7eb',display:'block',marginBottom:20,objectFit:'contain'}}/>}
-          {(()=>{
-            // Build choice index list, shuffle if randomizeChoices is set
-            const choiceIdxs=q.choices.map((_,i)=>i);
-            // Use a stable per-question shuffle seeded by question id so it doesn't re-shuffle on re-render
-            const displayIdxs=q.randomizeChoices
-              ? [...choiceIdxs].sort((a,b)=>{const seed=q.id.split('').reduce((s,ch)=>s+ch.charCodeAt(0),0);return Math.sin(seed*(a+1))-Math.sin(seed*(b+1));})
-              : choiceIdxs;
-            if(q.format==='mc') return displayIdxs.map(i=>(
+          {displayIdxs.map(i=>{
+            if(q.format==='mc') return(
               <button key={i} className={`opt-btn ${answers[q.id]===i?'selected':''}`} onClick={()=>setAnswers(a=>({...a,[q.id]:i}))}>
                 <span style={{width:22,height:22,borderRadius:'50%',border:`2px solid ${answers[q.id]===i?'#4F46E5':'#d1d5db'}`,background:answers[q.id]===i?'#4F46E5':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                   {answers[q.id]===i&&<span style={{width:7,height:7,borderRadius:'50%',background:'#fff'}}/>}
                 </span>{q.choices[i]}
               </button>
-            ));
-            if(q.format==='multi') return displayIdxs.map(i=>{const sel=multiAns.includes(i);return(
+            );
+            if(q.format==='multi'){const sel=multiAns.includes(i);return(
               <button key={i} className={`opt-btn ${sel?'selected':''}`} onClick={()=>toggleMulti(q.id,i)} style={{borderColor:sel?'#7c3aed':'#e5e7eb',background:sel?'#faf5ff':'#fff'}}>
                 <span style={{width:22,height:22,borderRadius:4,border:`2px solid ${sel?'#7c3aed':'#d1d5db'}`,background:sel?'#7c3aed':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:12,color:'#fff',fontWeight:700}}>{sel?'✓':''}</span>{q.choices[i]}
               </button>
-            );});
+            );}
             return null;
-          })()}
+          })}
           {q.format==='numeric'&&<input className="input" type="number" style={{maxWidth:200,fontSize:16}} value={answers[q.id]||''} onChange={e=>setAnswers(a=>({...a,[q.id]:e.target.value}))} placeholder="Enter answer"/>}
         </div>
         <div className="flex-between mt16">
