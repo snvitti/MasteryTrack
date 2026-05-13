@@ -315,24 +315,41 @@ function isCorrect(q,ans){
   return Math.abs(Number(ans)-q.correct)<=(q.tolerance||0.5);
 }
 
+// Partial credit score for multi-select (0 to 1)
+function partialCredit(q,ans){
+  if(q.format!=='multi') return isCorrect(q,ans)?1:0;
+  if(!Array.isArray(ans)) return 0;
+  const correct=new Set((q.correctMulti||[]).map(Number));
+  const selected=new Set(ans.map(Number));
+  const totalChoices=q.choices.length;
+  // Score = (correct selections + correct rejections) / total choices
+  let score=0;
+  for(let i=0;i<totalChoices;i++){
+    const shouldSelect=correct.has(i);
+    const didSelect=selected.has(i);
+    if(shouldSelect===didSelect) score++;
+  }
+  return score/totalChoices;
+}
+
 function scoreAttempt(attempt,questions){
   const stdMap={};
   questions.forEach(q=>{
     if(!attempt.answers.hasOwnProperty(q.id)) return;
     const w=WEIGHTS[q.difficulty]||1;
-    const ok=isCorrect(q,attempt.answers[q.id]);
+    const credit=partialCredit(q,attempt.answers[q.id]);
     q.standards.forEach(sid=>{
       if(!stdMap[sid]) stdMap[sid]={earned:0,possible:0};
       stdMap[sid].possible+=w;
-      if(ok) stdMap[sid].earned+=w;
+      stdMap[sid].earned+=w*credit;
     });
   });
   const stdScores={};
   Object.entries(stdMap).forEach(([sid,{earned,possible}])=>{stdScores[sid]=possible>0?earned/possible:null;});
   const answered=questions.filter(q=>attempt.answers.hasOwnProperty(q.id));
   const overall=answered.reduce((acc,q)=>{
-    const ok=isCorrect(q,attempt.answers[q.id]);
-    return{earned:acc.earned+(ok?1:0),total:acc.total+1};
+    const credit=partialCredit(q,attempt.answers[q.id]);
+    return{earned:acc.earned+credit,total:acc.total+1};
   },{earned:0,total:0});
   return{stdScores,overall};
 }
@@ -651,7 +668,6 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
   const asmStds=standards.filter(s=>asmStandardIds.includes(s.id));
 
 
-  const asmStds=standards;
   const coverage={};
   asmStds.forEach(s=>{coverage[s.id]={Basic:0,Conceptual:0,Applied:0};});
   localQs.forEach(q=>{q.standards.forEach(sid=>{if(coverage[sid])coverage[sid][q.difficulty]=(coverage[sid][q.difficulty]||0)+1;});});
@@ -1578,6 +1594,41 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
           </div>
         );
       })}
+      <div className="fw7 mb12 mt24" style={{fontSize:18}}>Full question review</div>
+      {questions.map((q,qi)=>{
+        const ans=attempt.answers[q.id];
+        const credit=partialCredit(q,ans);
+        const correct=credit===1;
+        const partial=credit>0&&credit<1;
+        const ansText=q.format==='mc'?(q.choices[Number(ans)]||'No answer'):q.format==='multi'?(Array.isArray(ans)&&ans.length>0?ans.map(i=>q.choices[i]).join(', '):'No answer'):String(ans??'No answer');
+        const corrText=q.format==='mc'?q.choices[q.correct]:q.format==='multi'?(q.correctMulti||[]).map(i=>q.choices[i]).join(', '):String(q.correct);
+        return(
+          <div key={q.id} style={{border:`1px solid ${correct?'#bbf7d0':partial?'#fde68a':'#fecaca'}`,borderRadius:12,padding:16,marginBottom:10,background:correct?'#f0fdf4':partial?'#fefce8':'#fff1f2'}}>
+            <div className="flex-between mb8">
+              <span style={{fontWeight:700,fontSize:13,color:'#6b7280'}}>Q{qi+1} · {q.difficulty}</span>
+              <span style={{fontWeight:700,fontSize:13,color:correct?'#166534':partial?'#854d0e':'#991b1b'}}>
+                {correct?'✓ Correct':partial?'◐ Partial ('+Math.round(credit*100)+'%)':'✗ Incorrect'}
+              </span>
+            </div>
+            <div className="fw6 mb8" style={{fontSize:15}}>{q.text}</div>
+            {q.image&&<img src={q.image} alt="" style={{maxHeight:80,borderRadius:8,marginBottom:8,border:'1px solid #e5e7eb'}}/>}
+            {!correct&&(
+              <div style={{marginBottom:8}}>
+                <div className="text-sm mb4" style={{color:'#991b1b'}}><strong>Your answer:</strong> {ansText}</div>
+                <div className="text-sm mb4" style={{color:'#166534'}}><strong>Correct answer:</strong> {corrText}</div>
+              </div>
+            )}
+            {correct&&<div className="text-sm mb4" style={{color:'#166534'}}><strong>Your answer:</strong> {ansText} ✓</div>}
+            {q.explanation&&<div className="text-sm" style={{background:'rgba(0,0,0,.04)',borderRadius:7,padding:'8px 10px',marginBottom:6}}><strong>Explanation:</strong> {q.explanation}</div>}
+            {q.format==='mc'&&!correct&&(q.wrongExplanations||{})[Number(ans)]&&(
+              <div className="text-sm" style={{background:'#fef9c3',borderRadius:7,padding:'8px 10px',border:'1px solid #fde68a',color:'#854d0e'}}><strong>Why your answer was wrong:</strong> {q.wrongExplanations[Number(ans)]}</div>
+            )}
+            {q.format==='numeric'&&!correct&&(q.wrongExplanations||{})['numeric']&&(
+              <div className="text-sm" style={{background:'#fef9c3',borderRadius:7,padding:'8px 10px',border:'1px solid #fde68a',color:'#854d0e'}}><strong>Hint:</strong> {q.wrongExplanations['numeric']}</div>
+            )}
+          </div>
+        );
+      })}
       <button className="btn btn-primary mt16" style={{width:'100%',padding:12,justifyContent:'center',fontSize:15}} onClick={()=>{setAnswers({});setCurQ(0);setTimeLeft(assessment.timeLimit*60);setExpired(false);setPhase('prestart');}}>Retake assessment</button>
     </div>
   );
@@ -2155,7 +2206,7 @@ function App(){
   const [dbError,setDbError]=useState('');
   const [saving,setSaving]=useState(false);
   const [fontSize,setFontSize]=useState('md');
-  const fontSizeMap={sm:'13px',md:'15px',lg:'19px'};
+  const fontSizeMap={sm:'13px',md:'16px',lg:'22px'};
 
   useEffect(()=>{ document.documentElement.style.setProperty('--fs', fontSizeMap[fontSize]||'15px'); },[fontSize]);
 
@@ -2257,8 +2308,8 @@ function App(){
   const FontSizeControl=()=>(
     <div style={{display:'flex',alignItems:'center',gap:6}}>
       <span style={{fontSize:'11px',color:'rgba(255,255,255,.5)',fontWeight:500,marginRight:2}}>Text</span>
-      {[['sm','12px'],['md','15px'],['lg','19px']].map(([k,sz])=>(
-        <button key={k} className={`fs-btn ${fontSize===k?'fs-active':''}`} style={{fontSize:sz}} onClick={()=>setFontSize(k)} title={k==='sm'?'Small':k==='md'?'Default':'Large'}>A</button>
+      {[['sm','11px'],['md','15px'],['lg','21px']].map(([k,sz])=>(
+        <button key={k} className={`fs-btn ${fontSize===k?'fs-active':''}`} style={{fontSize:sz,width:k==='lg'?36:k==='md'?30:24,height:k==='lg'?34:k==='md'?28:24}} onClick={()=>setFontSize(k)} title={k==='sm'?'Small text':k==='md'?'Default text':'Large text (accessibility)'}>A</button>
       ))}
     </div>
   );
