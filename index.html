@@ -486,7 +486,7 @@ function StandardsManager({standards,setStandards}){
 // QUESTION FORM
 // ═══════════════════════════════════════════════════════════
 function QuestionForm({initQ,standards,onSave,onCancel}){
-  const empty={text:'',format:'mc',choices:['','','',''],correct:0,correctMulti:[],standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},numCorrect:'',numTolerance:'0.5',image:null};
+  const empty={text:'',format:'mc',choices:['','','',''],correct:0,correctMulti:[],standards:[],difficulty:'Basic',explanation:'',wrongExplanations:{},numCorrect:'',numTolerance:'0.5',image:null,randomizeChoices:false};
   const [f,setF]=useState(initQ?{...empty,...initQ,numCorrect:String(initQ.correct||''),numTolerance:String(initQ.tolerance||'0.5'),wrongExplanations:initQ.wrongExplanations||{}}:empty);
 
   function addChoice(){setF(p=>({...p,choices:[...p.choices,'']}));}
@@ -527,7 +527,16 @@ function QuestionForm({initQ,standards,onSave,onCancel}){
       </div>
       {(f.format==='mc'||f.format==='multi')&&(
         <div className="mt12">
-          <div className="flex-between mb8"><label style={{marginBottom:0}}>{f.format==='multi'?'Choices (check all correct)':'Choices (select correct)'}</label><button className="btn btn-ghost btn-xs" onClick={addChoice}>+ Add choice</button></div>
+          <div className="flex-between mb8">
+            <label style={{marginBottom:0}}>{f.format==='multi'?'Choices (check all correct)':'Choices (select correct)'}</label>
+            <div className="flex gap8">
+              <label style={{marginBottom:0,display:'flex',alignItems:'center',gap:6,fontWeight:400,color:'var(--muted)',fontSize:'.85em',cursor:'pointer'}}>
+                <input type="checkbox" checked={!!f.randomizeChoices} onChange={e=>setF(p=>({...p,randomizeChoices:e.target.checked}))} style={{accentColor:'var(--accent)',width:14,height:14}}/>
+                Randomize choice order
+              </label>
+              <button className="btn btn-ghost btn-xs" onClick={addChoice}>+ Add choice</button>
+            </div>
+          </div>
           {f.format==='multi'&&<div className="text-xs text-muted mb8">Click the dot to mark a choice as correct.</div>}
           {f.choices.map((c,i)=>(
             <div key={i} className="choice-row">
@@ -547,9 +556,13 @@ function QuestionForm({initQ,standards,onSave,onCancel}){
         </div>
       )}
       {f.format==='numeric'&&(
-        <div className="grid2 mt12">
-          <div><label>Correct answer</label><input className="input mt4" type="number" value={f.numCorrect} onChange={e=>setF(p=>({...p,numCorrect:e.target.value}))}/></div>
-          <div><label>Tolerance (±)</label><input className="input mt4" type="number" value={f.numTolerance} onChange={e=>setF(p=>({...p,numTolerance:e.target.value}))}/></div>
+        <div className="mt12">
+          <div className="grid2 mb8" style={{gap:8}}>
+            <div><label>Correct answer</label><input className="input mt4" type="number" value={f.numCorrect} onChange={e=>setF(p=>({...p,numCorrect:e.target.value}))}/></div>
+            <div><label>Tolerance (±)</label><input className="input mt4" type="number" value={f.numTolerance} onChange={e=>setF(p=>({...p,numTolerance:e.target.value}))}/></div>
+          </div>
+          <label>Feedback for wrong numeric answers (optional)</label>
+          <input className="input mt4" value={(f.wrongExplanations||{})['numeric']||''} onChange={e=>setF(p=>({...p,wrongExplanations:{...(p.wrongExplanations||{}),numeric:e.target.value}}))} placeholder="e.g. Remember to convert units before calculating…"/>
         </div>
       )}
       <div className="mt12"><label>Explanation for correct answer</label>
@@ -1371,18 +1384,27 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
           </div>
           <div style={{fontSize:17,fontWeight:500,marginBottom:q.image?12:22,lineHeight:1.6}}>{q.text}</div>
           {q.image&&<img src={q.image} alt="Q" style={{maxWidth:'100%',maxHeight:220,borderRadius:8,border:'1px solid #e5e7eb',display:'block',marginBottom:20,objectFit:'contain'}}/>}
-          {q.format==='mc'&&q.choices.map((c,i)=>(
-            <button key={i} className={`opt-btn ${answers[q.id]===i?'selected':''}`} onClick={()=>setAnswers(a=>({...a,[q.id]:i}))}>
-              <span style={{width:22,height:22,borderRadius:'50%',border:`2px solid ${answers[q.id]===i?'#4F46E5':'#d1d5db'}`,background:answers[q.id]===i?'#4F46E5':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                {answers[q.id]===i&&<span style={{width:7,height:7,borderRadius:'50%',background:'#fff'}}/>}
-              </span>{c}
-            </button>
-          ))}
-          {q.format==='multi'&&q.choices.map((c,i)=>{const sel=multiAns.includes(i);return(
-            <button key={i} className={`opt-btn ${sel?'selected':''}`} onClick={()=>toggleMulti(q.id,i)} style={{borderColor:sel?'#7c3aed':'#e5e7eb',background:sel?'#faf5ff':'#fff'}}>
-              <span style={{width:22,height:22,borderRadius:4,border:`2px solid ${sel?'#7c3aed':'#d1d5db'}`,background:sel?'#7c3aed':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:12,color:'#fff',fontWeight:700}}>{sel?'✓':''}</span>{c}
-            </button>
-          );})}
+          {(()=>{
+            // Build choice index list, shuffle if randomizeChoices is set
+            const choiceIdxs=q.choices.map((_,i)=>i);
+            // Use a stable per-question shuffle seeded by question id so it doesn't re-shuffle on re-render
+            const displayIdxs=q.randomizeChoices
+              ? [...choiceIdxs].sort((a,b)=>{const seed=q.id.split('').reduce((s,ch)=>s+ch.charCodeAt(0),0);return Math.sin(seed*(a+1))-Math.sin(seed*(b+1));})
+              : choiceIdxs;
+            if(q.format==='mc') return displayIdxs.map(i=>(
+              <button key={i} className={`opt-btn ${answers[q.id]===i?'selected':''}`} onClick={()=>setAnswers(a=>({...a,[q.id]:i}))}>
+                <span style={{width:22,height:22,borderRadius:'50%',border:`2px solid ${answers[q.id]===i?'#4F46E5':'#d1d5db'}`,background:answers[q.id]===i?'#4F46E5':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  {answers[q.id]===i&&<span style={{width:7,height:7,borderRadius:'50%',background:'#fff'}}/>}
+                </span>{q.choices[i]}
+              </button>
+            ));
+            if(q.format==='multi') return displayIdxs.map(i=>{const sel=multiAns.includes(i);return(
+              <button key={i} className={`opt-btn ${sel?'selected':''}`} onClick={()=>toggleMulti(q.id,i)} style={{borderColor:sel?'#7c3aed':'#e5e7eb',background:sel?'#faf5ff':'#fff'}}>
+                <span style={{width:22,height:22,borderRadius:4,border:`2px solid ${sel?'#7c3aed':'#d1d5db'}`,background:sel?'#7c3aed':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:12,color:'#fff',fontWeight:700}}>{sel?'✓':''}</span>{q.choices[i]}
+              </button>
+            );});
+            return null;
+          })()}
           {q.format==='numeric'&&<input className="input" type="number" style={{maxWidth:200,fontSize:16}} value={answers[q.id]||''} onChange={e=>setAnswers(a=>({...a,[q.id]:e.target.value}))} placeholder="Enter answer"/>}
         </div>
         <div className="flex-between mt16">
@@ -1435,10 +1457,11 @@ function AssessmentTaker({assessment,questions,standards,videos,studentName,stud
                           {q.image&&<img src={q.image} alt="" style={{maxHeight:70,borderRadius:6,marginBottom:8,border:'1px solid #e5e7eb'}}/>}
                           {q.format==='mc'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {q.choices[q.correct]}</div>}
                           {q.format==='multi'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {(q.correctMulti||[]).map(i=>q.choices[i]).join(', ')}</div>}
-                          {q.format==='numeric'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {q.correct}</div>}
+                          {q.format==='numeric'&&<div className="text-sm mb4" style={{color:'#16a34a'}}>✓ Correct: {q.correct} (±{q.tolerance||0.5})</div>}
                           {q.explanation&&<div className="text-sm text-muted" style={{background:'#f4f3ef',borderRadius:6,padding:'7px',marginBottom:6}}><strong>Why correct:</strong> {q.explanation}</div>}
                           {wrongExp&&<div className="text-sm" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Why your answer was wrong:</strong> {wrongExp}</div>}
                           {q.format==='multi'&&Array.isArray(studentAns)&&studentAns.filter(i=>!(q.correctMulti||[]).includes(i)).map(i=>(q.wrongExplanations||{})[i]).filter(Boolean).map((exp,ei)=>(
+                          {q.format==='numeric'&&(q.wrongExplanations||{})['numeric']&&<div className="text-sm mt4" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Hint:</strong> {(q.wrongExplanations||{})['numeric']}</div>}
                             <div key={ei} className="text-sm mt4" style={{background:'#fffbeb',borderRadius:6,padding:'7px',border:'1px solid #fde68a',color:'#92400e'}}><strong>Wrong choice:</strong> {exp}</div>
                           ))}
                         </div>
@@ -1542,17 +1565,36 @@ function AssessmentPicker({units,questions,standards,videos,studentName,studentI
   }
 
   if(picked){
-    let qs=questions.filter(q=>(picked.questionIds||[]).includes(q.id));
-    // Apply randomize if enabled
+    // Match questions by ID — try exact match first
+    const qIds=picked.questionIds||[];
+    let qs=questions.filter(q=>qIds.includes(q.id));
+    // If no match (IDs stored as different type), try string comparison
+    if(qs.length===0&&qIds.length>0){
+      qs=questions.filter(q=>qIds.map(String).includes(String(q.id)));
+    }
+    // Apply randomize question ORDER if enabled
     if(picked.randomize) qs=[...qs].sort(()=>Math.random()-.5);
-    // Guard: no questions loaded
-    if(qs.length===0){
+    // Guard: genuinely no questions (assessment not built yet)
+    if(qs.length===0&&qIds.length===0){
       return(
         <div style={{maxWidth:540,margin:'0 auto'}}>
           <div className="card" style={{padding:32,textAlign:'center'}}>
             <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-            <div className="fw7" style={{fontSize:18,marginBottom:8}}>No questions available</div>
+            <div className="fw7" style={{fontSize:18,marginBottom:8}}>No questions yet</div>
             <div className="text-muted mb20">This assessment has no questions yet. Please contact your instructor.</div>
+            <button className="btn btn-secondary" onClick={()=>setPicked(null)}>← Back</button>
+          </div>
+        </div>
+      );
+    }
+    // If IDs exist but questions didn't load, show loading state
+    if(qs.length===0&&qIds.length>0){
+      return(
+        <div style={{maxWidth:540,margin:'0 auto'}}>
+          <div className="card" style={{padding:32,textAlign:'center'}}>
+            <Spinner/>
+            <div className="fw6 mt12">Loading questions…</div>
+            <div className="text-sm text-muted mt4 mb16">If this persists, please refresh the page.</div>
             <button className="btn btn-secondary" onClick={()=>setPicked(null)}>← Back</button>
           </div>
         </div>
@@ -1799,7 +1841,7 @@ function InstructorGate({onUnlock,onCancel,accounts,setAccounts}){
           <label>Password</label>
           <input className="input mt4 mb16" type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&attemptLogin()} placeholder="Your instructor password" autoFocus/>
           <button className="btn btn-primary mb8" style={{width:'100%',justifyContent:'center'}} onClick={attemptLogin}>Sign in</button>
-          <button className="btn btn-secondary mb8" style={{width:'100%',justifyContent:'center'}} onClick={()=>{setView('register');setErr('');setSuccess('');}}>Create new instructor account</button>
+          {/* Self-registration removed — accounts managed by admin only */}
           {onCancel&&<button className="btn btn-ghost btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={onCancel}>← Back to student login</button>}
         </div>
         <div className="text-xs text-muted mt12" style={{textAlign:'center'}}>
