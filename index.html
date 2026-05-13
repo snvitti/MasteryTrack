@@ -884,6 +884,9 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
   const [addTimeVal,setAddTimeVal]=useState(5);
   const [settingsSaved,setSettingsSaved]=useState(false);
   const [poolSettings,setPoolSettings]=useState(assessment.poolSettings||{});
+  const [asmTitle,setAsmTitle]=useState(assessment.title||'');
+  const [asmDesc,setAsmDesc]=useState(assessment.desc||'');
+  const [editingTitle,setEditingTitle]=useState(false);
   const asmStandardIds=assessment.standards||standards.map(s=>s.id);
   const asmStds=standards.filter(s=>asmStandardIds.includes(s.id));
 
@@ -911,7 +914,32 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
     <div>
       <button className="btn btn-ghost mb16" onClick={onClose}>← Back to units</button>
       <div className="flex-between mb16">
-        <div><div className="fw7" style={{fontSize:18}}>{assessment.title}</div><div className="text-sm text-muted">{assessment.desc}</div></div>
+        <div style={{flex:1,marginRight:12}}>
+          {editingTitle?(
+            <div>
+              <input className="input mb6" value={asmTitle} onChange={e=>setAsmTitle(e.target.value)}
+                style={{fontSize:18,fontWeight:700,padding:'6px 10px'}} autoFocus
+                onKeyDown={e=>{if(e.key==='Enter'){setEditingTitle(false);onSaveSettings({title:asmTitle,desc:asmDesc,randomize,timeLimit});}if(e.key==='Escape')setEditingTitle(false);}}
+              />
+              <input className="input mb6" value={asmDesc} onChange={e=>setAsmDesc(e.target.value)}
+                placeholder="Description (optional)" style={{fontSize:13}}
+                onKeyDown={e=>{if(e.key==='Enter'){setEditingTitle(false);onSaveSettings({title:asmTitle,desc:asmDesc,randomize,timeLimit});}}}
+              />
+              <div className="flex gap8">
+                <button className="btn btn-primary btn-sm" onClick={()=>{setEditingTitle(false);onSaveSettings({title:asmTitle,desc:asmDesc,randomize,timeLimit});}}>Save name</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setEditingTitle(false)}>Cancel</button>
+              </div>
+            </div>
+          ):(
+            <div className="flex gap8" style={{alignItems:'center'}}>
+              <div>
+                <div className="fw7" style={{fontSize:18}}>{asmTitle}</div>
+                {asmDesc&&<div className="text-sm text-muted">{asmDesc}</div>}
+              </div>
+              <button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:12}} onClick={()=>setEditingTitle(true)}>✏ Rename</button>
+            </div>
+          )}
+        </div>
         <div className="flex gap8">
           <button className={`btn btn-sm ${view==='pool'?'btn-primary':'btn-secondary'}`} onClick={()=>setView(view==='pool'?'list':'pool')}>⚙ Pool settings</button>
           <button className="btn btn-secondary btn-sm" onClick={()=>{setView('qform');setEditQId(null);}}>+ Add question</button>
@@ -948,7 +976,7 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
         </div>
       </div>
 
-      <QuestionBankUploader standards={asmStds} onAdd={qs=>setLocalQs(prev=>[...prev,...qs])}/>
+      <QuestionBankUploader standards={asmStds} onAdd={qs=>setLocalQs(prev=>{const merged=[...prev,...qs];return merged;})}/>
       {view==='pool'&&(
         <div className="card mb16" style={{border:'1.5px solid #a5b4fc'}}>
           <div className="fw7 mb4" style={{fontSize:15}}>Question pool settings</div>
@@ -1076,9 +1104,12 @@ function UnitsManager({standards,units,questions,setUnits,setQuestions,updateCou
 
   function handleBuilderSave(uid,aid,newQs,publish,settings){
     const newIds=newQs.map(q=>q.id);
-    const mergedQuestions=[...questions.filter(q=>!newIds.includes(q.id)),...newQs];
+    // Merge: keep all existing course questions PLUS all questions from builder
+    // This ensures pasted questions are never lost
+    const existingOther=questions.filter(q=>!newIds.includes(q.id));
+    const mergedQuestions=[...existingOther,...newQs];
     const updatedUnits=units.map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,questionIds:newQs.map(q=>q.id),published:publish??a.published,randomize:settings?.randomize??a.randomize,timeLimit:settings?.timeLimit??a.timeLimit}:a)}:u);
-    // ONE atomic save — both questions and units together
+    // Save both in one atomic call
     if(updateCourse){
       updateCourse({questions:mergedQuestions,units:updatedUnits});
     } else {
@@ -1092,7 +1123,8 @@ function UnitsManager({standards,units,questions,setUnits,setQuestions,updateCou
     const unit=units.find(u=>u.id===openBuilder.uid);
     const asm=unit?.assessments.find(a=>a.id===openBuilder.aid);
     if(!asm) return null;
-    const asmQs=questions.filter(q=>asm.questionIds.includes(q.id));
+    // Load questions linked to this assessment — use string compare for safety
+    const asmQs=questions.filter(q=>(asm.questionIds||[]).map(String).includes(String(q.id)));
     return(
       <div>
         <AssessmentBuilderModal assessment={asm} standards={standards} initQuestions={asmQs}
