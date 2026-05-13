@@ -4,9 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MasteryTrack</title>
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin="anonymous"></script>
+<script>
+// Fallback check — if React didn't load, show error
+window.addEventListener('DOMContentLoaded', function() {
+  if (typeof React === 'undefined' || typeof Babel === 'undefined') {
+    document.getElementById('root').innerHTML = '<div style="font-family:sans-serif;padding:40px;text-align:center"><h2>⚠️ Failed to load</h2><p>Could not load required scripts. Please check your internet connection and refresh.</p><button onclick="location.reload()" style="padding:10px 24px;background:#3b5bdb;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:16px">Retry</button></div>';
+  }
+});
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -736,15 +744,8 @@ function QuestionBankUploader({standards,onAdd}){
         <strong>Numeric:</strong> add a line <code style={{background:'#f1f5f9',padding:'1px 5px',borderRadius:4}}>NUM 30 5</code> (correct=30, tolerance=±5)
       </div>
       <textarea className="input mb12" rows={10} value={rawText} onChange={e=>setRawText(e.target.value)}
-        placeholder={"1. Which ion rushes in during depolarization?
-a. K+
-b. Ca2+
-*c. Na+
-d. Cl-
-
-2. The resting membrane potential is approximately:
-NUM -70 5"}
-        style={{fontFamily:'monospace',fontSize:13,lineHeight:1.6}}
+        placeholder={'1. Question text?\n*a. Correct answer\nb. Wrong answer\nc. Wrong answer\n\n2. Numeric question?\nNUM 30 5'}
+        style={{fontFamily:"monospace",fontSize:13,lineHeight:1.6}}
       />
       <div className="flex gap8">
         <button className="btn btn-primary btn-sm" onClick={handleParse}>Parse questions</button>
