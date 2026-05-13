@@ -739,7 +739,7 @@ function AssessmentGateSettings({assessment,units,onChange}){
 // ═══════════════════════════════════════════════════════════
 // UNITS MANAGER
 // ═══════════════════════════════════════════════════════════
-function UnitsManager({standards,units,questions,setUnits,setQuestions}){
+function UnitsManager({standards,units,questions,setUnits,setQuestions,updateCourse}){
   const [openBuilder,setOpenBuilder]=useState(null);
   const [showNewUnit,setShowNewUnit]=useState(false);
   const [newUnitForm,setNewUnitForm]=useState({name:'',desc:''});
@@ -749,19 +749,20 @@ function UnitsManager({standards,units,questions,setUnits,setQuestions}){
   function addUnit(){if(!newUnitForm.name)return;setUnits(prev=>[...prev,{id:'u'+Date.now(),name:newUnitForm.name,desc:newUnitForm.desc,collapsed:false,assessments:[]}]);setNewUnitForm({name:'',desc:''});setShowNewUnit(false);}
   function addAsm(uid){const f=newAsmForms[uid]||{};if(!f.title)return;const a={id:'a'+Date.now(),title:f.title,desc:f.desc||'',timeLimit:Number(f.timeLimit)||20,standards:standards.map(s=>s.id),questionIds:[],published:false,randomize:false,prerequisiteId:null,prerequisiteGrade:0};setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:[...u.assessments,a]}:u));setNewAsmForms(p=>({...p,[uid]:{}}));setShowNewAsm(p=>({...p,[uid]:false}));}
   function updateAsm(uid,aid,patch){
-    // Update local state only — full save happens in handleBuilderSave
-    const updatedUnits=(course?.units||[]).map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,...patch}:a)}:u);
-    updateCourse({units:updatedUnits});
+    setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,...patch}:a)}:u));
   }
 
   function handleBuilderSave(uid,aid,newQs,publish,settings){
     const newIds=newQs.map(q=>q.id);
-    // Merge new questions into existing question bank
-    const mergedQuestions=[...(course?.questions||[]).filter(q=>!newIds.includes(q.id)),...newQs];
-    // Update units with new assessment settings
-    const updatedUnits=(course?.units||[]).map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,questionIds:newQs.map(q=>q.id),published:publish??a.published,randomize:settings?.randomize??a.randomize,timeLimit:settings?.timeLimit??a.timeLimit}:a)}:u);
-    // Save BOTH questions and units in ONE call so they don't race
-    updateCourse({questions:mergedQuestions,units:updatedUnits});
+    const mergedQuestions=[...questions.filter(q=>!newIds.includes(q.id)),...newQs];
+    const updatedUnits=units.map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,questionIds:newQs.map(q=>q.id),published:publish??a.published,randomize:settings?.randomize??a.randomize,timeLimit:settings?.timeLimit??a.timeLimit}:a)}:u);
+    // ONE atomic save — both questions and units together
+    if(updateCourse){
+      updateCourse({questions:mergedQuestions,units:updatedUnits});
+    } else {
+      setQuestions(mergedQuestions);
+      setUnits(updatedUnits);
+    }
     setOpenBuilder(null);
   }
 
@@ -2135,13 +2136,20 @@ function App(){
 
   // ── Update course — saves to Neon ─────────────────────────────────────────
   async function updateCourse(patch){
-    const updated = {...course, ...patch};
-    setCourses(prev=>prev.map(c=>c.id===updated.id?updated:c));
+    // Always get the freshest course from state to avoid stale closure issues
+    const courseId = selectedCourse?.id;
+    if(!courseId){ console.error('updateCourse: no selectedCourse'); return; }
+    setCourses(prev=>{
+      const fresh = prev.find(c=>c.id===courseId)||selectedCourse;
+      const updated = {...fresh, ...patch};
+      // Save to Neon asynchronously
+      setSaving(true);
+      api('saveCourse', {course: updated})
+        .then(()=>setSaving(false))
+        .catch(e=>{ console.error('Save failed:',e); setSaving(false); });
+      return prev.map(c=>c.id===courseId?updated:c);
+    });
     setSelectedCourse(prev=>prev?{...prev,...patch}:prev);
-    setSaving(true);
-    try { await api('saveCourse', {course: updated}); }
-    catch(e){ console.error('Save failed:',e); }
-    setSaving(false);
   }
 
   const setStandards=v=>updateCourse({standards:typeof v==='function'?v(course.standards):v});
@@ -2252,7 +2260,7 @@ function App(){
         {instTab==='dashboard'&&<InstructorDashboard attempts={course.attempts||[]} standards={course.standards||[]} questions={course.questions||[]} courseName={course.name} units={course.units||[]}/>}
         {instTab==='students'&&<RosterManager course={course} updateCourse={updateCourse}/>}
         {instTab==='standards'&&<StandardsManager standards={course.standards||[]} setStandards={setStandards}/>}
-        {instTab==='assessments'&&<UnitsManager standards={course.standards||[]} units={course.units||[]} questions={course.questions||[]} setUnits={setUnits} setQuestions={setQuestions}/>}
+        {instTab==='assessments'&&<UnitsManager standards={course.standards||[]} units={course.units||[]} questions={course.questions||[]} setUnits={setUnits} setQuestions={setQuestions} updateCourse={updateCourse}/>}
         {instTab==='videos'&&<VideoLibrary standards={course.standards||[]} videos={course.videos||[]} setVideos={setVideos}/>}
       </div></>
     );
