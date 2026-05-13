@@ -748,12 +748,20 @@ function UnitsManager({standards,units,questions,setUnits,setQuestions}){
 
   function addUnit(){if(!newUnitForm.name)return;setUnits(prev=>[...prev,{id:'u'+Date.now(),name:newUnitForm.name,desc:newUnitForm.desc,collapsed:false,assessments:[]}]);setNewUnitForm({name:'',desc:''});setShowNewUnit(false);}
   function addAsm(uid){const f=newAsmForms[uid]||{};if(!f.title)return;const a={id:'a'+Date.now(),title:f.title,desc:f.desc||'',timeLimit:Number(f.timeLimit)||20,standards:standards.map(s=>s.id),questionIds:[],published:false,randomize:false,prerequisiteId:null,prerequisiteGrade:0};setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:[...u.assessments,a]}:u));setNewAsmForms(p=>({...p,[uid]:{}}));setShowNewAsm(p=>({...p,[uid]:false}));}
-  function updateAsm(uid,aid,patch){setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,...patch}:a)}:u));}
+  function updateAsm(uid,aid,patch){
+    // Update local state only — full save happens in handleBuilderSave
+    const updatedUnits=(course?.units||[]).map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,...patch}:a)}:u);
+    updateCourse({units:updatedUnits});
+  }
 
   function handleBuilderSave(uid,aid,newQs,publish,settings){
     const newIds=newQs.map(q=>q.id);
-    setQuestions(prev=>[...prev.filter(q=>!newIds.includes(q.id)),...newQs]);
-    updateAsm(uid,aid,{questionIds:newQs.map(q=>q.id),published:publish,randomize:settings?.randomize,timeLimit:settings?.timeLimit});
+    // Merge new questions into existing question bank
+    const mergedQuestions=[...(course?.questions||[]).filter(q=>!newIds.includes(q.id)),...newQs];
+    // Update units with new assessment settings
+    const updatedUnits=(course?.units||[]).map(u=>u.id===uid?{...u,assessments:u.assessments.map(a=>a.id===aid?{...a,questionIds:newQs.map(q=>q.id),published:publish??a.published,randomize:settings?.randomize??a.randomize,timeLimit:settings?.timeLimit??a.timeLimit}:a)}:u);
+    // Save BOTH questions and units in ONE call so they don't race
+    updateCourse({questions:mergedQuestions,units:updatedUnits});
     setOpenBuilder(null);
   }
 
