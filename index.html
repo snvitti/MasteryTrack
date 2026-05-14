@@ -370,15 +370,29 @@ function masteryLevel(score){
 }
 
 function bestMastery(attempts,studentId,questions){
-  const best={};
+  // Weighted average across ALL attempts per standard.
+  // Weight = number of weighted points possible for that standard in each attempt.
+  // This gives a defensible mastery score: more questions = more weight.
+  const stdEarned={};  // total weighted points earned per standard
+  const stdPossible={}; // total weighted points possible per standard
   attempts.filter(a=>a.studentId===studentId).forEach(attempt=>{
     const qs=questions.filter(q=>attempt.answers.hasOwnProperty(q.id));
-    const {stdScores}=scoreAttempt(attempt,qs);
-    Object.entries(stdScores).forEach(([sid,score])=>{
-      if(score!==null&&(best[sid]===null||best[sid]===undefined||score>best[sid])) best[sid]=score;
+    qs.forEach(q=>{
+      const w=WEIGHTS[q.difficulty]||1;
+      const credit=partialCredit(q,attempt.answers[q.id]);
+      q.standards.forEach(sid=>{
+        if(!stdEarned[sid]) stdEarned[sid]=0;
+        if(!stdPossible[sid]) stdPossible[sid]=0;
+        stdEarned[sid]+=w*credit;
+        stdPossible[sid]+=w;
+      });
     });
   });
-  return best;
+  const result={};
+  Object.keys(stdPossible).forEach(sid=>{
+    result[sid]=stdPossible[sid]>0?stdEarned[sid]/stdPossible[sid]:null;
+  });
+  return result;
 }
 
 function bestOverallPct(attempts,studentId,assessmentId,questions){
@@ -1580,8 +1594,14 @@ function renderToSVGString(data,height=180){
 // ═══════════════════════════════════════════════════════════
 // INSTRUCTOR DASHBOARD
 // ═══════════════════════════════════════════════════════════
-function InstructorDashboard({attempts,standards,questions,courseName,units}){
-  const students=[...new Map(attempts.map(a=>[a.studentId,{id:a.studentId,name:a.studentName}])).values()];
+function InstructorDashboard({attempts,standards,questions,courseName,units,roster}){
+  // Show ALL enrolled students (from roster) plus any who attempted but aren't on roster
+  const rosterStudents=(roster||[]).map(s=>({id:s.id,name:s.name,email:s.email}));
+  const attemptStudents=[...new Map(attempts.map(a=>[a.studentId,{id:a.studentId,name:a.studentName}])).values()];
+  // Merge: roster first, then add any attempt-only students not in roster
+  const rosterIds=new Set(rosterStudents.map(s=>s.id));
+  const extraStudents=attemptStudents.filter(s=>!rosterIds.has(s.id));
+  const students=[...rosterStudents,...extraStudents];
   const [sel,setSel]=useState(null);
 
   if(sel){
@@ -1609,19 +1629,26 @@ function InstructorDashboard({attempts,standards,questions,courseName,units}){
           ))}
         </div>
         <div className="fw6 mb10">Attempt history</div>
+        {stuAttempts.length===0&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:24}}>This student has not taken any assessments yet.</div>}
         {stuAttempts.map((att,i)=>{
           const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
           const {overall}=scoreAttempt(att,qs);
-          const asmId=att.assessmentId;
-          // Find assessment across all units (passed via closure — not available here, so we use a minimal stub)
+          const allAsms=(units||[]).flatMap(u=>u.assessments);
+          const asm=allAsms.find(a=>a.id===att.assessmentId);
+          const pct=overall.total>0?Math.round(overall.earned/overall.total*100):0;
           return(
-            <div key={att.id} className="card mb8 flex-between">
-              <div><div className="fw6">Attempt {i+1}</div><div className="text-xs text-muted">{new Date(att.submittedAt).toLocaleString()}</div></div>
-              <div className="flex gap8">
-                <span className="tag tag-blue">{overall.earned}/{overall.total} ({overall.total>0?Math.round(overall.earned/overall.total*100):0}%)</span>
-                <button className="print-btn no-print" style={{fontSize:12,padding:'4px 10px'}} onClick={()=>printAssessmentReport({student:sel,attempt:att,assessment:{id:asmId,title:'Assessment '+String(i+1),standards:standards.map(s=>s.id),timeLimit:20},questions,standards})}>
-                  🖨 Print
-                </button>
+            <div key={att.id} className="card mb8">
+              <div className="flex-between">
+                <div>
+                  <div className="fw6">{asm?.title||'Assessment'}</div>
+                  <div className="text-xs text-muted mt4">{new Date(att.submittedAt).toLocaleString()}{att.timeExpired?' · Time expired':''}</div>
+                </div>
+                <div className="flex gap8">
+                  <span className={`tag ${pct>=85?'tag-green':pct>=60?'tag-yellow':'tag-red'}`}>{pct}% ({overall.earned}/{overall.total})</span>
+                  <button className="print-btn no-print" style={{fontSize:12,padding:'4px 10px'}} onClick={()=>printAssessmentReport({student:sel,attempt:att,assessment:{id:att.assessmentId,title:asm?.title||'Assessment',standards:(asm?.standards||standards.map(s=>s.id)),timeLimit:asm?.timeLimit||20},questions,standards})}>
+                    🖨 Print
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -1641,8 +1668,16 @@ function InstructorDashboard({attempts,standards,questions,courseName,units}){
         return(
           <div key={stu.id} className="student-row" onClick={()=>setSel(stu)}>
             <div className="flex-between">
-              <div className="fw6">{stu.name}</div>
-              <div className="flex gap4">{standards.map(s=><MasteryCell key={s.id} score={best[s.id]} size="mini"/>)}</div>
+              <div>
+                <div className="fw6">{stu.name}</div>
+                {stu.email&&<div className="text-xs text-muted">{stu.email}</div>}
+              </div>
+              <div className="flex gap4 items-center" style={{alignItems:'center'}}>
+                {cnt===0
+                  ?<span className="tag tag-gray">No attempts yet</span>
+                  :<>{standards.map(s=><MasteryCell key={s.id} score={best[s.id]} size="mini"/>)}</>
+                }
+              </div>
             </div>
             <div className="text-xs text-muted mt4">{cnt} attempt{cnt!==1?'s':''}</div>
           </div>
@@ -1981,7 +2016,9 @@ function StudentDashboard({attempts,standards,questions,studentId,studentName,co
   const myAttempts=attempts.filter(a=>a.studentId===studentId);
   const best=bestMastery(myAttempts,studentId,questions);
   const allAsms=units.flatMap(u=>u.assessments);
-  const needsReview=standards.filter(s=>{const l=masteryLevel(best[s.id]);return l==='red'||l==='yellow';});
+  const hasAttempts=myAttempts.length>0;
+  // Only recommend videos for standards that are red/yellow AND student has attempted them
+  const needsReview=hasAttempts?standards.filter(s=>{const l=masteryLevel(best[s.id]);return l==='red'||l==='yellow';}):[]; 
   const recVids=videos.filter(v=>v.standards.some(sid=>needsReview.some(s=>s.id===sid)));
 
   return(
@@ -2737,7 +2774,7 @@ function App(){
       <><InstructorNav/>
       <div className="page">
         <div className="tabs">{INST_TABS.map(t=><button key={t} className={`tab ${instTab===t?'active':''}`} onClick={()=>setInstTab(t)}>{INST_LABELS[t]}</button>)}</div>
-        {instTab==='dashboard'&&<InstructorDashboard attempts={course.attempts||[]} standards={course.standards||[]} questions={course.questions||[]} courseName={course.name} units={course.units||[]}/>}
+        {instTab==='dashboard'&&<InstructorDashboard attempts={course.attempts||[]} standards={course.standards||[]} questions={course.questions||[]} courseName={course.name} units={course.units||[]} roster={course.roster||[]}/>}
         {instTab==='students'&&<RosterManager course={course} updateCourse={updateCourse}/>}
         {instTab==='standards'&&<StandardsManager standards={course.standards||[]} setStandards={setStandards}/>}
         {instTab==='assessments'&&<UnitsManager standards={course.standards||[]} units={course.units||[]} questions={course.questions||[]} setUnits={setUnits} setQuestions={setQuestions} updateCourse={updateCourse}/>}
