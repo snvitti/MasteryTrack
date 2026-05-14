@@ -370,12 +370,34 @@ function masteryLevel(score){
 }
 
 function bestMastery(attempts,studentId,questions){
-  // Weighted average across ALL attempts per standard.
-  // Weight = number of weighted points possible for that standard in each attempt.
-  // This gives a defensible mastery score: more questions = more weight.
-  const stdEarned={};  // total weighted points earned per standard
-  const stdPossible={}; // total weighted points possible per standard
-  attempts.filter(a=>a.studentId===studentId).forEach(attempt=>{
+  // For each assessment, find the student's BEST attempt.
+  // Then compute weighted average across those best attempts per standard.
+  const myAttempts=attempts.filter(a=>a.studentId===studentId);
+
+  // Group attempts by assessmentId
+  const byAsm={};
+  myAttempts.forEach(att=>{
+    if(!byAsm[att.assessmentId]) byAsm[att.assessmentId]=[];
+    byAsm[att.assessmentId].push(att);
+  });
+
+  // For each assessment, pick the best attempt (highest overall % score)
+  const bestAttempts=Object.values(byAsm).map(attList=>{
+    let best=null;
+    let bestPct=-1;
+    attList.forEach(att=>{
+      const qs=questions.filter(q=>att.answers.hasOwnProperty(q.id));
+      const {overall}=scoreAttempt(att,qs);
+      const pct=overall.total>0?overall.earned/overall.total:0;
+      if(pct>bestPct){bestPct=pct;best=att;}
+    });
+    return best;
+  }).filter(Boolean);
+
+  // Now compute weighted average per standard using only the best attempts
+  const stdEarned={};
+  const stdPossible={};
+  bestAttempts.forEach(attempt=>{
     const qs=questions.filter(q=>attempt.answers.hasOwnProperty(q.id));
     qs.forEach(q=>{
       const w=WEIGHTS[q.difficulty]||1;
@@ -388,6 +410,7 @@ function bestMastery(attempts,studentId,questions){
       });
     });
   });
+
   const result={};
   Object.keys(stdPossible).forEach(sid=>{
     result[sid]=stdPossible[sid]>0?stdEarned[sid]/stdPossible[sid]:null;
