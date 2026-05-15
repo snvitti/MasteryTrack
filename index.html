@@ -1237,12 +1237,11 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
             <GenerateVariantsButton question={q} standards={standards} onAdd={newQs=>setLocalQs(prev=>[...prev,...newQs])}/>
           </div>
         </div>
+      ))}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// ASSESSMENT GATING SETTINGS
 // ═══════════════════════════════════════════════════════════
 function AssessmentGateSettings({assessment,units,onChange}){
   const allAsms=units.flatMap(u=>u.assessments).filter(a=>a.id!==assessment.id);
