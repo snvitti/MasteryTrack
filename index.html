@@ -529,20 +529,7 @@ function ImageUploader({value,onChange}){
 // ═══════════════════════════════════════════════════════════
 // AI HELPER
 // ═══════════════════════════════════════════════════════════
-// ── AI HELPER (routes through Vercel API) ──────────────────────────────────
-async function claudeCall(system, userMsg, maxTokens=1500){
-  const res=await fetch('/api/data',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'aiCall',system,userMsg,maxTokens})
-  });
-  const data=await res.json();
-  if(!data.ok) throw new Error(data.error||'AI call failed');
-  return data.text;
-}
-function parseJSON(raw){
-  return JSON.parse(raw.replace(/```json|```/g,'').trim());
-}
+// AI features removed
 
 
 
@@ -922,129 +909,6 @@ function QuestionBankUploader({standards,onAdd}){
 }
 
 // ═══════════════════════════════════════════════════════════
-// AI VARIANT GENERATOR
-// ═══════════════════════════════════════════════════════════
-function GenerateVariantsButton({question,standards,onAdd}){
-  const [state,setState]=useState('idle'); // idle | loading | preview | error
-  const [count,setCount]=useState(3);
-  const [preview,setPreview]=useState([]);
-  const [err,setErr]=useState('');
-
-  async function generate(){
-    setState('loading');
-    setErr('');
-    try{
-      const SYS=`You are an expert educator generating assessment question variants.
-Given a question, generate ${count} VARIANTS that test the SAME concept at the SAME difficulty level.
-Rules:
-- Same format (mc/multi/numeric), same difficulty, same standards
-- DIFFERENT wording, numbers, scenarios, or context
-- All answers must be scientifically/mathematically correct
-- For MC: provide 4 choices with one correct (mark with "correct" index 0-3)
-- Return ONLY valid JSON array, no markdown, no explanation
-Schema: [{text,format,choices,correct,correctMulti,difficulty,explanation,wrongExplanations}]
-wrongExplanations is an object {choiceIndex: "why wrong"} for MC/multi.`;
-
-      const input={
-        text:question.text,
-        format:question.format,
-        choices:question.choices||[],
-        correct:question.correct,
-        correctMulti:question.correctMulti||[],
-        difficulty:question.difficulty,
-        explanation:question.explanation||'',
-      };
-      const raw=await claudeCall(SYS,`Generate ${count} variants of this question:
-
-${JSON.stringify(input,null,2)}`);
-      const parsed=parseJSON(raw);
-      const variants=parsed.map((q,i)=>({
-        ...q,
-        id:'var_'+Date.now()+'_'+i,
-        standards:question.standards,
-        difficulty:question.difficulty,
-        image:null,
-        tolerance:question.tolerance||0.5,
-        isAiVariant:true,
-        correctMulti:q.correctMulti||[],
-        wrongExplanations:q.wrongExplanations||{},
-        checked:true,
-      }));
-      setPreview(variants);
-      setState('preview');
-    }catch(e){
-      setErr('Generation failed: '+e.message);
-      setState('error');
-    }
-  }
-
-  if(state==='idle') return(
-    <div className="flex gap6" style={{alignItems:'center'}}>
-      <button className="btn btn-sm" style={{background:'#7c3aed',color:'#fff',border:'none'}} onClick={generate}>
-        ✦ Generate variants
-      </button>
-      <select value={count} onChange={e=>setCount(Number(e.target.value))} style={{padding:'4px 8px',borderRadius:7,border:'0.5px solid #c5d0f0',fontSize:13,background:'#fff'}}>
-        {[2,3,4,5].map(n=><option key={n} value={n}>{n} variants</option>)}
-      </select>
-    </div>
-  );
-
-  if(state==='loading') return(
-    <div className="flex gap8" style={{alignItems:'center'}}>
-      <Spinner/><span className="text-sm" style={{color:'#7c3aed'}}>Generating {count} variants…</span>
-    </div>
-  );
-
-  if(state==='error') return(
-    <div className="flex gap8" style={{alignItems:'center'}}>
-      <span className="text-sm" style={{color:'#dc2626'}}>⚠ {err}</span>
-      <button className="btn btn-ghost btn-sm" onClick={()=>setState('idle')}>Try again</button>
-    </div>
-  );
-
-  if(state==='preview') return(
-    <div className="card mt12" style={{border:'1.5px solid #ddd6fe',background:'#faf5ff'}}>
-      <div className="flex-between mb12">
-        <div>
-          <div className="fw7" style={{fontSize:14,color:'#7c3aed'}}>✦ {preview.length} variants generated</div>
-          <div className="text-xs text-muted">Review and select which to add to the question bank.</div>
-        </div>
-        <div className="flex gap8">
-          <button className="btn btn-sm" style={{background:'#7c3aed',color:'#fff',border:'none'}} onClick={()=>{onAdd(preview.filter(q=>q.checked).map(({checked,...q})=>q));setState('idle');setPreview([]);}}>
-            Add {preview.filter(q=>q.checked).length} selected
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={()=>{setState('idle');setPreview([]);}}>Discard</button>
-        </div>
-      </div>
-      {preview.map((q,i)=>(
-        <div key={q.id} className={`preview-item ${q.checked?'checked':''} mb8`} style={{background:'#fff',border:`1px solid ${q.checked?'#a78bfa':'#e5e7eb'}`}}
-          onClick={()=>setPreview(prev=>prev.map((x,j)=>j===i?{...x,checked:!x.checked}:x))}>
-          <input type="checkbox" checked={q.checked} onChange={()=>{}} style={{marginTop:2,accentColor:'#7c3aed',flexShrink:0}}/>
-          <div style={{flex:1}}>
-            <div className="fw6" style={{fontSize:14}}>{q.text}</div>
-            {q.format!=='numeric'&&q.choices&&(
-              <div className="mt6">
-                {q.choices.map((ch,ci)=>{
-                  const isCor=q.format==='mc'?ci===q.correct:(q.correctMulti||[]).includes(ci);
-                  return <div key={ci} style={{fontSize:13,color:isCor?'#166534':'#6b7280',padding:'2px 0'}}>{isCor?'✓ ':'   '}{ch}</div>;
-                })}
-              </div>
-            )}
-            {q.format==='numeric'&&<div className="text-sm mt4" style={{color:'#166534'}}>Answer: {q.correct} ± {q.tolerance||0.5}</div>}
-            <div className="flex gap4 mt6">
-              <span className="tag tag-purple" style={{fontSize:11}}>✦ AI variant</span>
-              <span className={`tag ${q.difficulty==='Basic'?'tag-green':q.difficulty==='Conceptual'?'tag-yellow':'tag-gray'}`}>{q.difficulty}</span>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  return null;
-}
-
-// ═══════════════════════════════════════════════════════════
 // ASSESSMENT BUILDER MODAL
 
 // ═══════════════════════════════════════════════════════════
@@ -1232,10 +1096,7 @@ function AssessmentBuilderModal({assessment,standards,initQuestions,onSave,onSav
               <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={()=>setLocalQs(prev=>prev.filter(x=>x.id!==q.id))}>✕</button>
             </div>
           </div>
-          {/* AI variant generator sits below each question */}
-          <div style={{paddingLeft:8,marginTop:4}}>
-            <GenerateVariantsButton question={q} standards={standards} onAdd={newQs=>setLocalQs(prev=>[...prev,...newQs])}/>
-          </div>
+
         </div>
       ))}
     </div>

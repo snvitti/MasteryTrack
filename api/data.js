@@ -1,4 +1,4 @@
-// api/data.js — Vercel serverless function
+// api/data.js — Vercel serverless function (no AI features)
 const { neon } = require('@neondatabase/serverless');
 
 function cors(res) {
@@ -23,28 +23,6 @@ module.exports = async function handler(req, res) {
       : req.query || {};
     const { action, ...p } = body;
 
-    // ── AI proxy — uses Gemini (free tier) ──────────────────────────────────
-    if (action === 'aiCall') {
-      const { system, userMsg, maxTokens=1500 } = p;
-      if (!process.env.GEMINI_API_KEY) {
-        return res.json({ ok:false, error:'GEMINI_API_KEY not configured in Vercel environment variables' });
-      }
-      const prompt = system ? `${system}\n\n${typeof userMsg==='string'?userMsg:JSON.stringify(userMsg)}` : (typeof userMsg==='string'?userMsg:JSON.stringify(userMsg));
-      const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 }
-        })
-      });
-      const aiData = await aiRes.json();
-      if (aiData.error) return res.json({ ok:false, error: aiData.error.message });
-      const text = aiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return res.json({ ok:true, text });
-    }
-
-    // ── Database actions ─────────────────────────────────────────────────────
     const sql = neon(process.env.DATABASE_URL);
     await ensureSchema(sql);
 
