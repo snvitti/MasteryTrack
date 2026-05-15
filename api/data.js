@@ -23,33 +23,28 @@ module.exports = async function handler(req, res) {
       : req.query || {};
     const { action, ...p } = body;
 
-    // ── AI proxy — calls Anthropic securely server-side ──────────────────────
+    // ── AI proxy — uses Gemini (free tier) ──────────────────────────────────
     if (action === 'aiCall') {
       const { system, userMsg, maxTokens=1500 } = p;
-      if (!process.env.ANTHROPIC_API_KEY) {
-        return res.json({ ok:false, error:'ANTHROPIC_API_KEY not configured in Vercel environment variables' });
+      if (!process.env.GEMINI_API_KEY) {
+        return res.json({ ok:false, error:'GEMINI_API_KEY not configured in Vercel environment variables' });
       }
-      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      const prompt = system ? `${system}\n\n${typeof userMsg==='string'?userMsg:JSON.stringify(userMsg)}` : (typeof userMsg==='string'?userMsg:JSON.stringify(userMsg));
+      const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: maxTokens,
-          system,
-          messages: [{ role: 'user', content: typeof userMsg === 'string' ? userMsg : JSON.stringify(userMsg) }]
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 }
         })
       });
       const aiData = await aiRes.json();
       if (aiData.error) return res.json({ ok:false, error: aiData.error.message });
-      const text = (aiData.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+      const text = aiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
       return res.json({ ok:true, text });
     }
 
-    // ── Database actions — require Neon ──────────────────────────────────────
+    // ── Database actions ─────────────────────────────────────────────────────
     const sql = neon(process.env.DATABASE_URL);
     await ensureSchema(sql);
 
