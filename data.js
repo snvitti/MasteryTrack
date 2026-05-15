@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
         return res.json({ ok:false, error:'GEMINI_API_KEY not configured in Vercel environment variables' });
       }
       const prompt = system ? `${system}\n\n${typeof userMsg==='string'?userMsg:JSON.stringify(userMsg)}` : (typeof userMsg==='string'?userMsg:JSON.stringify(userMsg));
-      const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
