@@ -1132,6 +1132,8 @@ function UnitsManager({standards,units,questions,setUnits,setQuestions,updateCou
   const [newUnitForm,setNewUnitForm]=useState({name:'',desc:''});
   const [showNewAsm,setShowNewAsm]=useState({});
   const [newAsmForms,setNewAsmForms]=useState({});
+  const [editUnitId,setEditUnitId]=useState(null);
+  const [editUnitForm,setEditUnitForm]=useState({name:'',desc:''});
 
   function addUnit(){if(!newUnitForm.name)return;setUnits(prev=>[...prev,{id:'u'+Date.now(),name:newUnitForm.name,desc:newUnitForm.desc,collapsed:false,assessments:[]}]);setNewUnitForm({name:'',desc:''});setShowNewUnit(false);}
   function addAsm(uid){const f=newAsmForms[uid]||{};if(!f.title)return;const a={id:'a'+Date.now(),title:f.title,desc:f.desc||'',timeLimit:Number(f.timeLimit)||20,standards:standards.map(s=>s.id),questionIds:[],published:false,randomize:false,prerequisiteId:null,prerequisiteGrade:0};setUnits(prev=>prev.map(u=>u.id===uid?{...u,assessments:[...u.assessments,a]}:u));setNewAsmForms(p=>({...p,[uid]:{}}));setShowNewAsm(p=>({...p,[uid]:false}));}
@@ -1193,13 +1195,39 @@ function UnitsManager({standards,units,questions,setUnits,setQuestions,updateCou
       {units.length===0&&!showNewUnit&&<div className="card" style={{textAlign:'center',color:'#9ca3af',padding:36}}>No units yet. Click "+ New unit" to get started.</div>}
       {units.map(unit=>(
         <div key={unit.id} className="unit-card">
-          <div className="unit-hdr" onClick={()=>setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,collapsed:!u.collapsed}:u))}>
-            <div style={{flex:1}}><div className="fw7" style={{fontSize:16}}>{unit.name}</div>{unit.desc&&<div className="text-sm text-muted">{unit.desc}</div>}</div>
-            <div className="flex gap8">
-              <span className="tag tag-gray">{unit.assessments.length} assessment{unit.assessments.length!==1?'s':''}</span>
-              <span className="text-muted" style={{fontSize:13}}>{unit.collapsed?'▼':'▲'}</span>
-              <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={e=>{e.stopPropagation();if(window.confirm('Delete this unit?'))setUnits(prev=>prev.filter(u=>u.id!==unit.id));}}>✕</button>
-            </div>
+          <div className="unit-hdr">
+            {editUnitId===unit.id?(
+              <div style={{flex:1,display:'flex',gap:8,alignItems:'flex-start',flexWrap:'wrap'}} onClick={e=>e.stopPropagation()}>
+                <div style={{flex:1,minWidth:200}}>
+                  <input className="input mb6" value={editUnitForm.name} onChange={e=>setEditUnitForm(f=>({...f,name:e.target.value}))}
+                    placeholder="Unit name" style={{fontWeight:700,fontSize:15}}
+                    onKeyDown={e=>{if(e.key==='Enter'){setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,name:editUnitForm.name,desc:editUnitForm.desc}:u));setEditUnitId(null);}if(e.key==='Escape')setEditUnitId(null);}}
+                    autoFocus
+                  />
+                  <input className="input" value={editUnitForm.desc} onChange={e=>setEditUnitForm(f=>({...f,desc:e.target.value}))}
+                    placeholder="Description (optional)" style={{fontSize:13}}
+                    onKeyDown={e=>{if(e.key==='Enter'){setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,name:editUnitForm.name,desc:editUnitForm.desc}:u));setEditUnitId(null);}}}
+                  />
+                </div>
+                <div className="flex gap6 mt4">
+                  <button className="btn btn-primary btn-sm" onClick={()=>{setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,name:editUnitForm.name,desc:editUnitForm.desc}:u));setEditUnitId(null);}}>Save</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditUnitId(null)}>Cancel</button>
+                </div>
+              </div>
+            ):(
+              <>
+                <div style={{flex:1,cursor:'pointer'}} onClick={()=>setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,collapsed:!u.collapsed}:u))}>
+                  <div className="fw7" style={{fontSize:16}}>{unit.name}</div>
+                  {unit.desc&&<div className="text-sm text-muted">{unit.desc}</div>}
+                </div>
+                <div className="flex gap8">
+                  <span className="tag tag-gray">{unit.assessments.length} assessment{unit.assessments.length!==1?'s':''}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();setEditUnitForm({name:unit.name,desc:unit.desc||''});setEditUnitId(unit.id);}}>✏ Edit</button>
+                  <span className="text-muted" style={{fontSize:13,cursor:'pointer'}} onClick={()=>setUnits(prev=>prev.map(u=>u.id===unit.id?{...u,collapsed:!u.collapsed}:u))}>{unit.collapsed?'▼':'▲'}</span>
+                  <button className="btn btn-ghost btn-sm" style={{color:'#dc2626'}} onClick={e=>{e.stopPropagation();if(window.confirm('Delete this unit?'))setUnits(prev=>prev.filter(u=>u.id!==unit.id));}}>✕</button>
+                </div>
+              </>
+            )}
           </div>
           {!unit.collapsed&&(
             <div className="unit-body">
